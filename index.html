@@ -25,7 +25,7 @@ input{font:inherit;color:inherit;letter-spacing:inherit}
 .num{font-variant-numeric:tabular-nums}
 svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;display:block}
 
-.app{max-width:480px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 128px}
+.app{max-width:480px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 104px}
 .scr{display:none}
 .scr.on{display:block;animation:scrIn .55s var(--spring) both}
 @keyframes scrIn{from{opacity:0;transform:translateX(var(--dx,0px)) scale(.985)}to{opacity:1;transform:none}}
@@ -242,12 +242,12 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 .nav{position:fixed;left:0;right:0;top:0;z-index:25;padding-top:env(safe-area-inset-top,0px);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
 .nav.on{opacity:1}
 .nav>div{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(20px) saturate(1.8);backdrop-filter:blur(20px) saturate(1.8);box-shadow:inset 0 -.5px 0 var(--sep)}
-.toast{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:8px;max-width:calc(100% - 40px);padding:12px 18px;background:rgba(44,44,46,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:24px;font-size:15px;font-weight:600;letter-spacing:-.24px;transform:translate(-50%,24px) scale(.9);opacity:0;pointer-events:none;transition:transform .5s var(--spring),opacity .25s}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:8px;max-width:calc(100% - 40px);padding:12px 18px;background:rgba(44,44,46,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:24px;font-size:15px;font-weight:600;letter-spacing:-.24px;transform:translate(-50%,24px) scale(.9);opacity:0;pointer-events:none;transition:transform .5s var(--spring),opacity .25s}
 .toast.on{transform:translate(-50%,0);opacity:1}
 .toast svg{color:var(--lime);width:20px;height:20px;stroke-width:2.6}
 
 /* dock with the liquid-glass tab bar */
-.dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:20;display:block;width:100%;height:80px;border:0;background:transparent;color-scheme:dark}
+.dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 5px);z-index:20;display:block;width:100%;height:80px;visibility:hidden;border:0;background:transparent;color-scheme:dark}
 
 /* skeleton: shapes shimmer first, content settles in after */
 .sk{transition:background-color .45s var(--ease)}
@@ -419,7 +419,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 80</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 81</p>
  </div>
 </section>
 
@@ -619,7 +619,7 @@ var cur=0,TITLES=['Главная','Тариф','Расходы','Поддерж
 function go(i){if(i===cur){window.scrollTo(0,0);return}var a=$('.scr[data-scr="'+cur+'"]'),b=$('.scr[data-scr="'+i+'"]');a.classList.remove('on');
  b.style.setProperty('--dx',(i>cur?24:-24)+'px');b.classList.add('on');cur=i;navt.textContent=TITLES[i];window.scrollTo(0,0);applyAll();if(i===2)setPer(1);
  try{$('#dock').contentWindow.postMessage({itbSet:i},'*')}catch(_){}}
-window.addEventListener('message',function(e){var d=e.data;if(d&&typeof d.itb==='number'&&d.itb!==cur)go(d.itb)});
+window.addEventListener('message',function(e){var d=e.data;if(d&&d.itbReady)$('#dock').style.visibility='visible';if(d&&typeof d.itb==='number'&&d.itb!==cur)go(d.itb)});setTimeout(function(){$('#dock').style.visibility='visible'},4000);
 var ticking=false;window.addEventListener('scroll',function(){if(ticking)return;ticking=true;requestAnimationFrame(function(){ticking=false;nav.classList.toggle('on',(window.pageYOffset||0)>(cur?40:64))})},{passive:true});
 
 /* ---------- loading: skeleton shimmer, then content settles in ---------- */
@@ -633,5 +633,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<iframe class="dock" id="dock" src="menu.html?v=80" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
+<iframe class="dock" id="dock" src="menu.html?v=81" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
 </body></html>
