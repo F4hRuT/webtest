@@ -254,8 +254,8 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 /* skeleton: shapes shimmer first, content settles in after */
 .sk{transition:background-color .45s var(--ease)}
 .sk>*{transition:opacity .5s var(--ease) var(--d,0s)}
-.ld .sk{background-color:var(--card)!important;background-image:linear-gradient(100deg,rgba(255,255,255,0) 25%,rgba(255,255,255,.075) 45%,rgba(255,255,255,0) 65%);background-size:250% 100%;background-repeat:no-repeat;animation:sh 1.25s linear infinite}
-.ld .story.sk{background-image:none;animation:none;background-color:var(--card2)!important}
+.ld .sk{animation:skp 1.3s ease-in-out infinite}
+@keyframes skp{0%,100%{opacity:1}50%{opacity:.5}}
 .ld .sk>*{opacity:0}
 .ld .skt{color:transparent!important;background-color:var(--card);border-radius:10px;background-image:linear-gradient(100deg,rgba(255,255,255,0) 25%,rgba(255,255,255,.075) 45%,rgba(255,255,255,0) 65%);background-size:250% 100%;animation:sh 1.25s linear infinite}
 .ld .skt *{visibility:hidden}
@@ -421,7 +421,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 73</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 74</p>
  </div>
 </section>
 
@@ -439,10 +439,10 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 
   <div class="sec"><h2 class="skt">Что включено</h2></div>
   <div class="card grp sk" data-sq="24">
-   <div class="row"><span class="ri" data-sq="9" style="background:var(--lime);color:var(--ink)"><svg class="ic"><use href="#i-spark"/></svg></span><span class="rb"><span class="rt"><b>Кэшбэк до 30%</b><s>Категории меняются каждый месяц</s></span><label class="sw on" data-sq="pill"><input type="checkbox" checked aria-label="Кэшбэк до 30%"><i></i></label></span></div>
-   <div class="row"><span class="ri" data-sq="9" style="background:var(--blue)"><svg class="ic"><use href="#i-pin"/></svg></span><span class="rb"><span class="rt"><b>Снятие без комиссии</b><s>До 100 000 ₽ в месяц</s></span><label class="sw on" data-sq="pill"><input type="checkbox" checked aria-label="Снятие без комиссии"><i></i></label></span></div>
-   <div class="row"><span class="ri" data-sq="9" style="background:var(--orange)"><svg class="ic"><use href="#i-bell"/></svg></span><span class="rb"><span class="rt"><b>Уведомления об операциях</b><s>Бесплатно</s></span><label class="sw on" data-sq="pill"><input type="checkbox" checked aria-label="Уведомления об операциях"><i></i></label></span></div>
-   <div class="row"><span class="ri" data-sq="9" style="background:var(--violet)"><svg class="ic"><use href="#i-shield"/></svg></span><span class="rb"><span class="rt"><b>Страховка покупок</b><s>49 ₽ в месяц</s></span><label class="sw" data-sq="pill"><input type="checkbox" aria-label="Страховка покупок"><i></i></label></span></div>
+   <div class="row"><span class="ri" data-sq="9" style="background:var(--lime);color:var(--ink)"><svg class="ic"><use href="#i-spark"/></svg></span><span class="rb"><span class="rt"><b>Кэшбэк до 30%</b><s>Категории меняются каждый месяц</s></span><label class="sw on"><input type="checkbox" checked aria-label="Кэшбэк до 30%"><i></i></label></span></div>
+   <div class="row"><span class="ri" data-sq="9" style="background:var(--blue)"><svg class="ic"><use href="#i-pin"/></svg></span><span class="rb"><span class="rt"><b>Снятие без комиссии</b><s>До 100 000 ₽ в месяц</s></span><label class="sw on"><input type="checkbox" checked aria-label="Снятие без комиссии"><i></i></label></span></div>
+   <div class="row"><span class="ri" data-sq="9" style="background:var(--orange)"><svg class="ic"><use href="#i-bell"/></svg></span><span class="rb"><span class="rt"><b>Уведомления об операциях</b><s>Бесплатно</s></span><label class="sw on"><input type="checkbox" checked aria-label="Уведомления об операциях"><i></i></label></span></div>
+   <div class="row"><span class="ri" data-sq="9" style="background:var(--violet)"><svg class="ic"><use href="#i-shield"/></svg></span><span class="rb"><span class="rt"><b>Страховка покупок</b><s>49 ₽ в месяц</s></span><label class="sw"><input type="checkbox" aria-label="Страховка покупок"><i></i></label></span></div>
   </div>
 
   <div class="sec"><h2 class="skt">Другие тарифы</h2></div>
@@ -529,16 +529,28 @@ var PHI=52.4*Math.PI/180,ARAT=1.889;
 function cap(W,H,ox,oy){var R=H/2,c=Math.cos(PHI),s=Math.sin(PHI),qx=R*(1-c),qy=R*(1-s),b1=qx+qy*s/c,b2=b1+1.5*Math.pow(qy/c,2)/(R*c),a=Math.max(Math.min(ARAT*R,W/2),b2),k=Math.min(1,W/(2*a));
  function p(x,y){return f(x+ox)+' '+f(y+oy)}function X(x){return x*k}function Z(x){return W-x*k}var A='A'+f(R*k)+' '+f(R)+' 0 0 1 ';
  return 'M'+p(0,R)+A+p(X(qx),qy)+'C'+p(X(b1),0)+' '+p(X(b2),0)+' '+p(X(a),0)+'L'+p(Z(a),0)+'C'+p(Z(b2),0)+' '+p(Z(b1),0)+' '+p(Z(qx),qy)+A+p(W,R)+A+p(Z(qx),H-qy)+'C'+p(Z(b1),H)+' '+p(Z(b2),H)+' '+p(Z(a),H)+'L'+p(X(a),H)+'C'+p(X(b2),H)+' '+p(X(b1),H)+' '+p(X(qx),H-qy)+A+p(0,R)+'Z'}
-function shape(w,h,r,o){w-=2*o;h-=2*o;if(r==='pill'||r>=Math.min(w,h)/2-.01)return cap(w,h,o,o);return sq(w,h,Math.max(.5,r-o),.6,o)}
-var probe="path('M0 0H1V1Z')",CP=!!(window.CSS&&CSS.supports&&(CSS.supports('clip-path',probe)||CSS.supports('-webkit-clip-path',probe))),
-    MK=!CP&&!!(window.CSS&&CSS.supports&&(CSS.supports('-webkit-mask-image','url(x)')||CSS.supports('mask-image','url(x)')));
-var SVGNS='http://www.w3.org/2000/svg';
-function apply(el){var r=el.getAttribute('data-sq');if(r==='circle')return;var w=el.offsetWidth,h=el.offsetHeight;if(!w||!h)return;var key=w+'x'+h;if(el._k===key)return;el._k=key;
- r=r==='pill'?'pill':+r;var d=shape(w,h,r,0),st=el.style;
- if(CP){var v="path('"+d+"')";st.clipPath=v;st.webkitClipPath=v;st.borderRadius='0'}
- else if(MK){var m='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="'+SVGNS+'" width="'+w+'" height="'+h+'"><path d="'+d+'"/></svg>')+'")';st.webkitMaskImage=st.maskImage=m;st.webkitMaskSize=st.maskSize='100% 100%';st.webkitMaskRepeat=st.maskRepeat='no-repeat';st.borderRadius='0'}
+var SMOOTH=.8,SVGNS='http://www.w3.org/2000/svg',LOADING=true;
+function shape(w,h,r,o){w-=2*o;h-=2*o;if(r==='pill'||r>=Math.min(w,h)/2-.01)return cap(w,h,o,o);return sq(w,h,Math.max(.5,r-o),SMOOTH,o)}
+function parseFill(cs){var bi=cs.backgroundImage||'',bc=cs.backgroundColor;
+ if(bi.indexOf('linear-gradient(')===0){var body=bi.slice(16,-1),ang=180,parts=body.split(/,(?![^(]*\))/),st=[];
+  if(/deg\s*$/.test(parts[0])){ang=parseFloat(parts[0]);parts.shift()}
+  parts.forEach(function(p){var m=/^\s*(rgba?\([^)]*\)|#[0-9a-fA-F]+|[a-z]+)\s*([\d.]+%)?\s*$/.exec(p);if(m)st.push([m[1],m[2]])});
+  if(st.length>1)return {g:ang,s:st}}
+ return /^rgba\(0, 0, 0, 0\)$|^transparent$/.test(bc)?null:{c:bc}}
+function f2(n){return Math.round(n*1e4)/1e4}
+function fillSVG(f){if(f.g==null)return ['',f.c];var a=f.g*Math.PI/180,sx=Math.sin(a)/2,cy=Math.cos(a)/2,n=f.s.length,st='';
+ f.s.forEach(function(x,i){st+='<stop offset="'+(x[1]||(i/(n-1)*100)+'%')+'" stop-color="'+x[0]+'"/>'});
+ return ['<defs><linearGradient id="g" x1="'+f2(.5-sx)+'" y1="'+f2(.5+cy)+'" x2="'+f2(.5+sx)+'" y2="'+f2(.5-cy)+'">'+st+'</linearGradient></defs>','url(#g)']}
+var SKC='#1c1c1e';
+function apply(el){var r=el.getAttribute('data-sq');if(r==='circle')return;var w=el.offsetWidth,h=el.offsetHeight;if(!w||!h)return;
+ var sk=LOADING&&el.classList.contains('sk'),key=w+'x'+h+(sk?'s':'');if(el._k===key)return;el._k=key;
+ r=r==='pill'?'pill':+r;var f=sk?{c:SKC}:el._f;
+ if(f){var F=fillSVG(f),svg='<svg xmlns="'+SVGNS+'" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+F[0]+'<path fill="'+F[1]+'" d="'+shape(w,h,r,0)+'"/></svg>',st=el.style;
+  st.backgroundImage='url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';st.backgroundSize='100% 100%';st.backgroundRepeat='no-repeat';st.backgroundColor='transparent'}
  if(el._rim){el._rim.setAttribute('viewBox','0 0 '+w+' '+h);el._rim.firstChild.setAttribute('d',shape(w,h,r,.5))}}
 var SQ=$$('[data-sq]');
+document.body.classList.remove('ld');SQ.forEach(function(el){if(el.getAttribute('data-sq')!=='circle')el._f=parseFill(getComputedStyle(el))});document.body.classList.add('ld');
+try{SKC=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||SKC}catch(_){}
 SQ.forEach(function(el){if(el.hasAttribute('data-rim')){var s=document.createElementNS(SVGNS,'svg');s.setAttribute('class','rim');s.setAttribute('aria-hidden','true');
   var p=document.createElementNS(SVGNS,'path');s.appendChild(p);el.appendChild(s);el._rim=s;
   if(el.getAttribute('data-sq')==='circle')p.setAttribute('d','M0.5 22a21.5 21.5 0 1 0 43 0a21.5 21.5 0 1 0-43 0'),s.setAttribute('viewBox','0 0 44 44')}});
@@ -616,7 +628,7 @@ var ticking=false;window.addEventListener('scroll',function(){if(ticking)return;
 renderAmts();setPer(1);
 var t0=Date.now();
 function reveal(){var n=0;$$('.sk').forEach(function(el){var r=el.getBoundingClientRect();if(r.top<innerHeight+40){el.style.setProperty('--d',(n*0.035).toFixed(3)+'s');if(!reduce)el.classList.add('pop');n++}});
- document.body.classList.remove('ld');setTimeout(function(){document.body.classList.add('ready');countUp($('#total'),900)},120);
+ LOADING=false;document.body.classList.remove('ld');SQ.forEach(function(el){el._k=''});applyAll();setTimeout(function(){document.body.classList.add('ready');countUp($('#total'),900)},120);
  setTimeout(function(){$$('.pop').forEach(function(el){el.classList.remove('pop')})},1600)}
 function ready(){var wait=Math.max(0,650-(Date.now()-t0));setTimeout(reveal,reduce?0:wait)}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else ready();
