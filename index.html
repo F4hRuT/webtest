@@ -247,9 +247,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 .toast svg{color:var(--lime);width:20px;height:20px;stroke-width:2.6}
 
 /* dock with the liquid-glass tab bar */
-.dock{position:fixed;left:0;right:0;bottom:0;z-index:20;padding-bottom:env(safe-area-inset-bottom,0px);pointer-events:none}
-.dock .itb-stage{height:84px!important}
-.dock .itb-bar{pointer-events:auto}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:20;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg)}
 
 /* skeleton: shapes shimmer first, content settles in after */
 .sk{transition:background-color .45s var(--ease)}
@@ -421,7 +419,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 74</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 75</p>
  </div>
 </section>
 
@@ -546,7 +544,7 @@ function apply(el){var r=el.getAttribute('data-sq');if(r==='circle')return;var w
  var sk=LOADING&&el.classList.contains('sk'),key=w+'x'+h+(sk?'s':'');if(el._k===key)return;el._k=key;
  r=r==='pill'?'pill':+r;var f=sk?{c:SKC}:el._f;
  if(f){var F=fillSVG(f),svg='<svg xmlns="'+SVGNS+'" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+F[0]+'<path fill="'+F[1]+'" d="'+shape(w,h,r,0)+'"/></svg>',st=el.style;
-  st.backgroundImage='url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';st.backgroundSize='100% 100%';st.backgroundRepeat='no-repeat';st.backgroundColor='transparent'}
+  st.backgroundImage='url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';st.borderRadius=(r==='pill'?h/2:r)+'px';st.backgroundSize='100% 100%';st.backgroundRepeat='no-repeat';st.backgroundColor='transparent'}
  if(el._rim){el._rim.setAttribute('viewBox','0 0 '+w+' '+h);el._rim.firstChild.setAttribute('d',shape(w,h,r,.5))}}
 var SQ=$$('[data-sq]');
 document.body.classList.remove('ld');SQ.forEach(function(el){if(el.getAttribute('data-sq')!=='circle')el._f=parseFill(getComputedStyle(el))});document.body.classList.add('ld');
