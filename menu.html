@@ -79,6 +79,7 @@ var FILL=[[0,.16],[.008,.152],[.016,.138],[.024,.131],[.032,.126],[.048,.118],[.
  x.putImageData(im,0,0);$('glass').style.background='url('+cv.toDataURL()+') 0 0 / '+(W/(dpr*2)).toFixed(3)+'px 100% repeat-x'})();
 (function(){var g=$('glass').style,cp="path('"+path(BW,BH,0,0)+"')",ok=window.CSS&&CSS.supports&&(CSS.supports('clip-path',cp)||CSS.supports('-webkit-clip-path',cp));if(ok){g.clipPath=cp;g.webkitClipPath=cp}else{var m='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+BW+' '+BH+'" preserveAspectRatio="none"><path d="'+path(BW,BH,0,0)+'"/></svg>')+'")';
  g.webkitMaskImage=g.maskImage=m;g.webkitMaskSize=g.maskSize='100% 100%';g.webkitMaskRepeat=g.maskRepeat='no-repeat';if(!g.webkitMaskImage&&!g.maskImage){g.borderRadius=BH/2+'px';g.overflow='hidden'}}})();
+$('glass').style.backgroundColor='#1e1e1e';
 var PADX=30,PADY=14,CW=BW+2*PADX,CH=BH+2*PADY,baseC=$('base'),bctx=baseC.getContext('2d');
 function vz(){var v=window.visualViewport;return v&&v.scale>1?Math.min(2,v.scale):1}
 var DPR=Math.min(4,pxr()*vz()),TS=Math.max(2,DPR),texW=null,texO=null,texOS=null;
