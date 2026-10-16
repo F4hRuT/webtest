@@ -1,0 +1,24 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Тест чёткости 2</title>
+<style>
+html,body{margin:0;background:#000;color:#fff;font:15px/1.4 -apple-system,system-ui,sans-serif}
+.fx{position:fixed;left:0;right:0;width:100%;height:80px;border:0;background:transparent;z-index:20}
+.tag{position:fixed;left:8px;z-index:40;color:#b6d70a;font:600 13px -apple-system,sans-serif;background:#000;padding:2px 6px;border-radius:6px;max-width:300px}
+#info{position:fixed;top:0;right:0;z-index:50;background:rgba(0,0,0,.85);color:#7CFC00;font:11px/1.35 Menlo,monospace;padding:6px 8px;white-space:pre}
+.fill p{margin:0 16px 10px;color:#aaa}
+</style></head><body><div class="fill" id="fill"></div><div id="info"></div>
+<script>
+var h='';for(var i=0;i<80;i++)h+='<p>Строка текста №'+(i+1)+' — Главная Тариф Расходы Поддержка</p>';document.getElementById('fill').innerHTML=h;
+var V=[['A','как в банке сейчас',{}],['B','без will-change + округление',{nowc:1,snap:1}],['C','will-change оставлен + округление',{snap:1}],['D','без transform + округление',{nowc:1,snap:1,notf:1}]];
+var rows=[];V.forEach(function(v,k){[0,1].forEach(function(an){rows.push({id:v[0]+(an?'2':'1'),txt:v[0]+(an?' после переключения':' без нажатий')+' — '+v[1],o:v[2],an:an})})});
+rows.forEach(function(r,i){var b=i*82;var t=document.createElement('span');t.className='tag';t.style.bottom=(b+30)+'px';t.textContent=r.txt;document.body.appendChild(t);
+ var f=document.createElement('iframe');f.className='fx';f.style.bottom=b+'px';f.id=r.id;f.src='../menu.html?v=t2'+r.id;document.body.appendChild(f);r.f=f;
+ f.addEventListener('load',function(){setTimeout(function(){var d=f.contentDocument,bar=d.getElementById('bar');
+  if(r.o.nowc)bar.style.willChange='auto';
+  if(r.o.notf){var st=d.createElement('style');st.textContent='#bar{transform:none!important;will-change:auto!important}';d.head.appendChild(st)}
+  if(r.o.snap){var q=bar.getBoundingClientRect(),p=devicePixelRatio||1;bar.style.left=(Math.round(q.left*p)/p-q.left)+'px';bar.style.top=(Math.round(q.top*p)/p-q.top)+'px'}
+  if(r.an){f.contentWindow.postMessage({itbSet:2},'*');setTimeout(function(){f.contentWindow.postMessage({itbSet:0},'*')},2500)}
+ },2500)})});
+function info(){var s='DPR '+devicePixelRatio+' inner '+innerWidth+'x'+innerHeight+'  t='+Math.round(performance.now()/1000)+'s\n';rows.forEach(function(r){try{var d=r.f.contentDocument,b=d.getElementById('bar'),q=b.getBoundingClientRect();s+=r.id+' x'+q.left.toFixed(3)+' y'+q.top.toFixed(3)+' tf '+(b.style.transform||'-')+' wc '+getComputedStyle(b).willChange+'\n'}catch(e){s+=r.id+' err\n'}});document.getElementById('info').textContent=s}
+setInterval(info,1000);
+</script></body></html>
