@@ -28,6 +28,7 @@ body{margin:0;background:transparent;color:#fff;font:14px/1.45 -apple-system,Bli
  <div class="bar" id="bar">
   <div class="glass" id="glass"><div class="fl" id="fl"></div></div>
   <svg class="edge" id="edge" aria-hidden="true"></svg>
+  <svg class="edge" id="glow" aria-hidden="true"></svg>
   <canvas class="gl" id="base" aria-hidden="true"></canvas>
   <canvas class="gl lensedge" id="lensedge" aria-hidden="true"></canvas>
   <div class="tabs" id="tabs" role="tablist"></div>
@@ -71,6 +72,21 @@ function edgeSVG(svg,W,H,spec,uid){
 var BAR_EDGE={g:{d:[SPEC.dark,'#000'],r:[SPEC.rim,'#fff']},
  l:[{g:'d',w:.667,o:1,in:-.417},{g:'r',w:.417,o:.55,in:.208},{g:'r',w:.75,o:.357,in:.375},{g:'r',w:1.167,o:.42,in:.583}]};
 edgeSVG($('edge'),BW,BH,BAR_EDGE,'be');
+
+var GLN=24,glowG=$('glow');
+(function(){if(!glowG)return;var P=path(BW,BH,0,0),Pi=path(BW-1,BH-1,.5,.5),M=' x="-4" y="-4" width="'+(BW+8)+'" height="'+(BH+8)+'"';
+ function grp(k,v){return '<g id="gg'+k+'" mask="url(#gm'+k+')" style="display:none"><path d="'+P+'" fill="none" stroke="url(#gc'+k+')" stroke-width="12" opacity=".2" clip-path="url(#gin)"/><path d="'+Pi+'" fill="none" stroke="url(#gc'+k+')" stroke-width="1.15"/></g>'}
+ glowG.setAttribute('viewBox','0 0 '+BW+' '+BH);
+ glowG.innerHTML='<defs><clipPath id="gin"><path d="'+P+'"/></clipPath>'+
+  '<linearGradient id="gct" x1="0" y1="0" x2="1" y2="0"></linearGradient><linearGradient id="gcb" x1="0" y1="0" x2="1" y2="0"></linearGradient>'+
+  '<linearGradient id="gvt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#fff" stop-opacity=".75"/><stop offset=".62" stop-color="#fff" stop-opacity="0"/></linearGradient>'+
+  '<linearGradient id="gvb" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#fff" stop-opacity=".75"/><stop offset=".62" stop-color="#fff" stop-opacity="0"/></linearGradient>'+
+  '<mask id="gmt" maskUnits="userSpaceOnUse"'+M+'><rect'+M+' fill="url(#gvt)"/></mask><mask id="gmb" maskUnits="userSpaceOnUse"'+M+'><rect'+M+' fill="url(#gvb)"/></mask></defs>'+grp('t')+grp('b')})();
+var glowLast={t:'',b:''};
+function setGlow(o){if(!glowG)return;['t','b'].forEach(function(k){var a=o[k],s=a?a.join('|'):'';if(s===glowLast[k])return;glowLast[k]=s;var g=$('gg'+k);
+ if(!a||!a.length){g.style.display='none';return}var h='',any=0;for(var i=0;i<a.length;i++){var c=a[i].split(','),al=+c[3];if(al>.01)any=1;h+='<stop offset="'+((i+.5)/a.length).toFixed(3)+'" stop-color="rgb('+c[0]+','+c[1]+','+c[2]+')" stop-opacity="'+al+'"/>'}
+ $('gc'+k).innerHTML=h;g.style.display=any?'':'none'})}
+window.addEventListener('message',function(e){var d=e.data;if(d&&d.glow)setGlow(d.glow)});
 var FILL=[[0,.16],[.008,.152],[.016,.138],[.024,.131],[.032,.126],[.048,.118],[.064,.111],[.08,.105],[.1,.0995],[.13,.0948],[.16,.0928],[.2,.0924],[.3,.0932],[.5,.0946],[.7,.0962],[.85,.0985],[.9,.1015],[.93,.108],[.95,.116],[.97,.128],[.984,.137],[.992,.144],[1,.1545]];
 (function(){var dpr=pxr(),H=Math.max(2,Math.round(BH*dpr*2)),W=128,cv=document.createElement('canvas');cv.width=W;cv.height=H;
  var x=cv.getContext('2d'),im=x.createImageData(W,H),d=im.data,k=0,s=1234567;function rnd(){s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}
