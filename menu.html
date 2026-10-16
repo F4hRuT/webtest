@@ -10,7 +10,7 @@ body{margin:0;background:transparent;color:#fff;font:14px/1.45 -apple-system,Bli
 .stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .bar{position:relative;width:359.84px;height:62px;flex:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%;will-change:transform}
 .glass,.fl,.edge{position:absolute;left:0;top:0;width:100%;height:100%}
-.glass{background:rgba(255,255,255,.075);-webkit-backdrop-filter:blur(10px) saturate(1.8);backdrop-filter:blur(10px) saturate(1.8)}
+.glass{background:#1e1e1e}
 .fl{background:rgba(255,255,255,.075);opacity:0;will-change:opacity}
 .edge{overflow:visible;pointer-events:none}
 .gl{position:absolute;pointer-events:none}
@@ -76,10 +76,9 @@ var FILL=[[0,.16],[.008,.152],[.016,.138],[.024,.131],[.032,.126],[.048,.118],[.
  var x=cv.getContext('2d'),im=x.createImageData(W,H),d=im.data,k=0,s=1234567;function rnd(){s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}
  for(var y=0;y<H;y++){var u=(y+.5)/H,i=0;while(i<FILL.length-2&&FILL[i+1][0]<u)i++;var a=FILL[i],b=FILL[i+1],q=(u-a[0])/(b[0]-a[0]),A=(a[1]+(b[1]-a[1])*q)*255;
   for(var xx=0;xx<W;xx++,k+=4){d[k]=d[k+1]=d[k+2]=255;d[k+3]=Math.floor(A+rnd())}}
- x.putImageData(im,0,0);$('glass').style.background='url('+cv.toDataURL()+') 0 0 / '+(W/(dpr*2)).toFixed(3)+'px 100% repeat-x'})();
+ x.putImageData(im,0,0);$('glass').style.background='url('+cv.toDataURL()+') 0 0 / '+(W/(dpr*2)).toFixed(3)+'px 100% repeat-x #1e1e1e'})();
 (function(){var g=$('glass').style,cp="path('"+path(BW,BH,0,0)+"')",ok=window.CSS&&CSS.supports&&(CSS.supports('clip-path',cp)||CSS.supports('-webkit-clip-path',cp));if(ok){g.clipPath=cp;g.webkitClipPath=cp}else{var m='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+BW+' '+BH+'" preserveAspectRatio="none"><path d="'+path(BW,BH,0,0)+'"/></svg>')+'")';
  g.webkitMaskImage=g.maskImage=m;g.webkitMaskSize=g.maskSize='100% 100%';g.webkitMaskRepeat=g.maskRepeat='no-repeat';if(!g.webkitMaskImage&&!g.maskImage){g.borderRadius=BH/2+'px';g.overflow='hidden'}}})();
-$('glass').style.backgroundColor='#1e1e1e';
 var PADX=30,PADY=14,CW=BW+2*PADX,CH=BH+2*PADY,baseC=$('base'),bctx=baseC.getContext('2d');
 function vz(){var v=window.visualViewport;return v&&v.scale>1?Math.min(2,v.scale):1}
 var DPR=Math.min(4,pxr()*vz()),TS=Math.max(2,DPR),texW=null,texO=null,texOS=null;
