@@ -425,7 +425,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 84</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 85</p>
  </div>
 </section>
 
@@ -630,7 +630,7 @@ var ticking=false;window.addEventListener('scroll',function(){if(ticking)return;
 
 /* ---------- colour light on the menu rim from nearby colourful things ---------- */
 (function(){try{if(navigator.deviceMemory&&navigator.deviceMemory<=2)document.documentElement.classList.add('lowfx')}catch(_){}
- var cx=document.createElement('canvas').getContext('2d'),src=[],lastS='',pend=false,BW=359.84,NEAR=46;
+ var cx=document.createElement('canvas').getContext('2d'),src=[],lastS='',pend=false,BW=359.84,NEAR=80;
  function rgb(s){if(!s||s==='none')return null;try{cx.fillStyle='#000';cx.fillStyle=s;var v=cx.fillStyle;if(v[0]==='#')return [parseInt(v.substr(1,2),16),parseInt(v.substr(3,2),16),parseInt(v.substr(5,2),16),1];var m=v.match(/[\d.]+/g);return m?[+m[0],+m[1],+m[2],m[3]==null?1:+m[3]]:null}catch(_){return null}}
  function colOf(f){if(!f)return null;if(f.c)return rgb(f.c);var n=0,r=0,g=0,b=0;f.s.forEach(function(x){var c=rgb(x[0]);if(c&&c[3]>.3){r+=c[0];g+=c[1];b+=c[2];n++}});return n?[r/n,g/n,b/n,1]:null}
  function vivid(c){if(!c||c[3]<.35)return null;var mx=Math.max(c[0],c[1],c[2]),mn=Math.min(c[0],c[1],c[2]);if(mx<70||mx-mn<55)return null;return [c[0]|0,c[1]|0,c[2]|0]}
@@ -672,5 +672,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<div class="fade" aria-hidden="true"></div><div class="edgefill" aria-hidden="true"></div><iframe class="dock" id="dock" src="menu.html?v=84" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
+<div class="fade" aria-hidden="true"></div><div class="edgefill" aria-hidden="true"></div><iframe class="dock" id="dock" src="menu.html?v=85" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
 </body></html>

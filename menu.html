@@ -85,7 +85,7 @@ var FX=7;
 var PADX=30,PADY=14,CW=BW+2*PADX,CH=BH+2*PADY,baseC=$('base'),bctx=baseC.getContext('2d');
 
 /* colour light from nearby page objects: a soft light map, seen only through a thin rim line and a faint inner haze */
-var glC=$('glowc'),glX=glC.getContext('2d'),glSrc=[],glMask=null,glLM=document.createElement('canvas'),glTmp=document.createElement('canvas'),GLB=26,GLT=.19,GLMIN=26;
+var glC=$('glowc'),glX=glC.getContext('2d'),glSrc=[],glMask=null,glLM=document.createElement('canvas'),glTmp=document.createElement('canvas'),GLB=44,GLT=.38,GLMIN=26;
 glLM.width=Math.ceil(CW);glLM.height=Math.ceil(CH);
 function glMasks(){var w=glC.width,h=glC.height,k=w/CW;function mk(f){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.setTransform(k,0,0,k,0,0);f(x);return c}
  glTmp.width=w;glTmp.height=h;
