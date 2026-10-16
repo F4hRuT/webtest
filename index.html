@@ -247,7 +247,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 .toast svg{color:var(--lime);width:20px;height:20px;stroke-width:2.6}
 
 /* dock with the liquid-glass tab bar */
-.dock{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px);z-index:20;display:block;width:100%;height:100px;border:0;background:transparent;color-scheme:dark}
+.dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:20;display:block;width:100%;height:80px;border:0;background:transparent;color-scheme:dark}
 
 /* skeleton: shapes shimmer first, content settles in after */
 .sk{transition:background-color .45s var(--ease)}
@@ -419,7 +419,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 79</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 80</p>
  </div>
 </section>
 
@@ -633,5 +633,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<iframe class="dock" id="dock" src="menu.html?v=79" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
+<iframe class="dock" id="dock" src="menu.html?v=80" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
 </body></html>
