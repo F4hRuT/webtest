@@ -10,7 +10,7 @@ body{margin:0;background:transparent;color:#fff;font:14px/1.45 -apple-system,Bli
 .stage{position:relative;height:100vh;box-sizing:border-box;padding-bottom:3px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
 .bar{position:relative;width:359.84px;height:62px;flex:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%;will-change:transform}
 .glass,.fl,.edge{position:absolute;left:0;top:0;width:100%;height:100%}
-.glass{background:#1c1c1c}
+.glass{background:#212121}
 .fl{background:rgba(255,255,255,.075);opacity:0;will-change:opacity}
 .edge{overflow:visible;pointer-events:none}
 .gl{position:absolute;pointer-events:none}
@@ -74,13 +74,17 @@ var BAR_EDGE={g:{d:[SPEC.dark,'#000'],r:[SPEC.rim,'#fff']},
 /* static bar look is painted into the glass background below (reference: iOS Fitness tab bar) */
 
 var FILL=[[0,.16],[.008,.152],[.016,.138],[.024,.131],[.032,.126],[.048,.118],[.064,.111],[.08,.105],[.1,.0995],[.13,.0948],[.16,.0928],[.2,.0924],[.3,.0932],[.5,.0946],[.7,.0962],[.85,.0985],[.9,.1015],[.93,.108],[.95,.116],[.97,.128],[.984,.137],[.992,.144],[1,.1545]];
-var BASE='#1c1c1c',RIMD=[.345,.255,.2,.068,.058,.045,.035,.026,.026,.022,.018,.013,.013,.009,.009,.009,.004,.004,.004,.004,.002,0],
+var BASEV=33,BASE='rgb(33,33,33)',RIMV=[97,80,58],RIMD=[0,0,0,.068,.058,.045,.035,.026,.026,.022,.018,.013,.013,.009,.009,.009,.004,.004,.004,.004,.002,0],
  RIMX=[[0,0],[2,.12],[5.3,.22],[8.7,.33],[12,.42],[18.7,.6],[28.7,.89],[45,1]];
-function paintBar(){var g=$('glass');try{if(!window.Path2D)throw 0;var dpr=Math.min(4,pxr()*vz()),cv=document.createElement('canvas'),W=Math.round(BW*dpr),H=Math.round(BH*dpr);cv.width=W;cv.height=H;
- var x=cv.getContext('2d');x.scale(W/BW,H/BH);x.fillStyle=BASE;x.fillRect(0,0,BW,BH);var px=1/dpr,n=Math.ceil(RIMD.length*dpr/3);
- for(var i=0;i<n;i++){var dpt=(i+.5)*px,f=dpt*3,k=Math.min(RIMD.length-1,Math.floor(f)),t=f-k,a=RIMD[k]+(RIMD[Math.min(RIMD.length-1,k+1)]-RIMD[k])*t;if(a<=0)continue;
+function rimA(k){return k<3?(RIMV[k]-BASEV)/(255-BASEV):RIMD[k]*227/(255-BASEV)}
+function paintBar(){var g=$('glass');try{if(!window.Path2D)throw 0;var dpr=Math.min(4,pxr()*vz()),SS=2,W=Math.round(BW*dpr),H=Math.round(BH*dpr),
+  hi=document.createElement('canvas'),cv=document.createElement('canvas');hi.width=W*SS;hi.height=H*SS;cv.width=W;cv.height=H;
+ var x=hi.getContext('2d');x.scale(hi.width/BW,hi.height/BH);x.fillStyle=BASE;x.fillRect(0,0,BW,BH);
+ var step=1/(dpr*SS),n=Math.ceil(RIMD.length/3/step);
+ for(var i=0;i<n;i++){var d0=i*step,d1=(i+1)*step,k=Math.min(RIMD.length-1,Math.floor((d0+step/2)*3)),a=rimA(k);if(a<=0)continue;
   var gr=x.createLinearGradient(0,0,BW,0);for(var j=0;j<RIMX.length;j++){var o=RIMX[j][0]/BW,c='rgba(255,255,255,'+(a*RIMX[j][1]).toFixed(4)+')';gr.addColorStop(o,c);gr.addColorStop(1-o,c)}
-  x.strokeStyle=gr;x.lineWidth=px;x.stroke(new Path2D(path(BW-2*dpt,BH-2*dpt,dpt,dpt)))}
+  x.fillStyle=gr;x.fill(new Path2D(path(BW-2*d0,BH-2*d0,d0,d0)+path(BW-2*d1,BH-2*d1,d1,d1)),'evenodd')}
+ var y=cv.getContext('2d');y.imageSmoothingEnabled=true;try{y.imageSmoothingQuality='high'}catch(_){}y.drawImage(hi,0,0,W,H);
  g.style.background='url('+cv.toDataURL()+') 0 0 / 100% 100% no-repeat '+BASE}catch(_){g.style.background=BASE}}
 paintBar();
 (function(){var g=$('glass').style,cp="path('"+path(BW,BH,0,0)+"')",ok=window.CSS&&CSS.supports&&(CSS.supports('clip-path',cp)||CSS.supports('-webkit-clip-path',cp));if(ok){g.clipPath=cp;g.webkitClipPath=cp}else{var m='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+BW+' '+BH+'" preserveAspectRatio="none"><path d="'+path(BW,BH,0,0)+'"/></svg>')+'")';
