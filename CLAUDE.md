@@ -49,17 +49,26 @@
 
 ## Проверка перед сдачей
 
-- **VPN на Mac должен быть выключен** — с ним симулятор не открывает сайты.
+- **VPN не выключать.** Пользователю он нужен: без VPN не работает Claude Code. С включённым VPN симулятор
+  не открывает сайты из интернета («не удаётся найти сервер»), но адрес `localhost` открывает. Сам Mac (curl) сайт в интернете
+  открывает и с VPN. Поэтому порядок такой:
+  1. Запустить локальный сервер в папке проекта: `python3 -m http.server 8000`. Проверить в симуляторе `http://localhost:8000/?v=N`.
+  2. Если всё в порядке — коммит, `git push`, подождать сборку GitHub Pages (`gh run list`).
+  3. Сверить опубликованные файлы с локальными байт в байт (с Mac, при включённом VPN):
+     ```
+     for f in index.html menu.html; do curl -s "https://f4hrut.github.io/webtest/$f?nocache=$RANDOM" | cmp -s - "$f" && echo "$f совпадает" || echo "$f ОТЛИЧАЕТСЯ"; done
+     ```
+     Всё совпадает — значит в интернете ровно то, что проверено в симуляторе. Если отличается — подождать 1–2 минуты и повторить.
 - **Safari iOS:** симулятор «iPhone 17 Pro», iOS 27.0.
   ```
   xcrun simctl boot "iPhone 17 Pro"            # если ещё не запущен
-  xcrun simctl openurl booted "https://f4hrut.github.io/webtest/?v=N"
+  xcrun simctl openurl booted "http://localhost:8000/?v=N"
   xcrun simctl io booted screenshot /tmp/sim.png
   ```
   Окно симулятора: Xcode → Open Developer Tool → Device Hub. Для нажатий/жестов — MCP `ios-simulator` (idb).
-  Локальную версию до публикации проверять через `python3 -m http.server` в папке проекта и адрес `http://localhost:8000` в симуляторе.
 - **Safari на Mac:** `safaridriver` включён (автоматизация разрешена) — можно управлять через WebDriver.
 - **WebKit и Chrome:** MCP `playwright` (WebKit); для Android — эмуляция ширины 360 и 390, DPR 2–3.
 - **Сравнение с образцом:** ImageMagick (`magick compare -metric AE …`), ffmpeg — для покадрового разбора видео.
   Образцы от пользователя — PNG 3x с iPhone.
-- **Публикация:** `git push` в `main`, GitHub Pages обновляется 1–2 минуты (статус: `gh run list`). Проверять по ссылке с новым `?v=`.
+- **Публикация:** `git push` в `main`, GitHub Pages обновляется 1–2 минуты (статус: `gh run list`). После публикации — сверка файлов (шаг 3 выше).
+  Пользователю давать ссылку с новым `?v=`.
