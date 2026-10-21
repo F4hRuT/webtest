@@ -8,6 +8,9 @@ class H(http.server.SimpleHTTPRequestHandler):
     def do_POST(s):
         n=int(s.headers.get('Content-Length',0)); body=s.rfile.read(n)
         name=s.path.strip('/').replace('/','_') or 'post'
-        open(os.path.join(OUT,'post_'+name),'wb').write(body)
+        if name.startswith('glslog'):
+            open(os.path.join(OUT,'glslog.txt'),'ab').write(body+b'\n')
+        else:
+            open(os.path.join(OUT,'post_'+name),'wb').write(body)
         s.send_response(200); s.end_headers(); s.wfile.write(b'ok')
 http.server.ThreadingHTTPServer(('',8002),H).serve_forever()

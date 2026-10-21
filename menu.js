@@ -331,16 +331,27 @@ GLS=(function(){
  /* refraction: iOS samples the glass shifted along the edge normal (table D in CLAUDE.md). Here: copies of the glass picture
     scaled about the bar centre line (straight part) or the cap centre (ends), shown in bands by distance t from the edge (pt):
     [t0, t1, scale]; scale < 1 shows content from outside the bar (rim glow), > 1 magnifies (lens near the inner edge). */
- var BANDS=[[0,.55,.836],[1,5,1.059],[5,10,1.035],[10,20,1.015]],FE=.35;
+ /* first three bands = the three outer device-pixel rows of iOS (sample 8.6 pt outside, 3.3 pt outside, 1 pt inside: table DT) */
+ var BANDS=[[0,1/3,.779],[1/3,2/3,.8905],[2/3,1,1.0084],[1,5,1.059],[5,10,1.035],[10,20,1.015]],CAPC=40;
+ function FEo(b){return b<=1.01?.12:.35}
  var VS='attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
  var PR='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 v;';
  var FD=PR+'uniform sampler2D S;uniform vec2 Z,D;uniform float G;void main(){vec2 u=v*Z;'+
   'vec3 c=.25*(texture2D(S,u+vec2(-D.x,-D.y)).rgb+texture2D(S,u+vec2(D.x,-D.y)).rgb+texture2D(S,u+vec2(-D.x,D.y)).rgb+texture2D(S,u+vec2(D.x,D.y)).rgb);gl_FragColor=vec4(pow(c,vec3(G)),1.);}';
- var FB=PR+'uniform sampler2D T;uniform vec2 D;uniform float W['+KW.length+'];'+
-  'void main(){vec4 c=W[0]*texture2D(T,v);for(int i=1;i<'+KW.length+';i++){float f=float(i);c+=W[i]*(texture2D(T,v+D*f)+texture2D(T,v-D*f));}gl_FragColor=c;}';
- var FG=PR+'uniform sampler2D T,L;uniform float G;const vec3 W7=vec3(.2126,.7152,.0722);void main(){vec3 z=texture2D(T,v).rgb;'+
-  'vec3 c=pow(max(z,vec3(0.)),vec3(1./G))*255.;float l=dot(c,W7);float gv=texture2D(L,vec2((l+.5)/256.,.5)).a*255.;'+
-  'vec3 gc=gv+clamp(.6543-.000833*l,.4,.7)*(c-l);gl_FragColor=vec4(clamp(gc,0.,255.)/255.,1.);}';
+ var FB=PR+'uniform sampler2D T;uniform vec2 D;uniform vec4 CL;uniform float W['+KW.length+'];vec4 S(vec2 p){return texture2D(T,clamp(p,CL.xy,CL.zw));}'+
+  'void main(){vec4 c=W[0]*S(v);for(int i=1;i<'+KW.length+';i++){float f=float(i);c+=W[i]*(S(v+D*f)+S(v-D*f));}gl_FragColor=c;}';
+ var TONE='const vec3 W7=vec3(.2126,.7152,.0722);uniform sampler2D L;uniform float G;vec3 tone(vec3 z){vec3 c=pow(max(z,vec3(0.)),vec3(1./G))*255.;float l=dot(c,W7);'+
+  'float gv=texture2D(L,vec2((min(l,255.)+.5)/256.,.5)).a*255.;return gv+clamp(.6543-.000833*l,.4,.7)*(c-l);}';
+ var FG=PR+'uniform sampler2D T;'+TONE+'void main(){gl_FragColor=vec4(clamp(tone(texture2D(T,v).rgb),0.,255.)/255.,1.);}';
+ /* iOS sees only a window around the bar (15 pt above, 13.67 below, 15.67 to the sides, in 8 px cells) and repeats its edge
+    cell outward. The page-wide picture cannot do that while Safari scrolls it, so the difference at the top and bottom edge
+    is a separate picture per screen: rows = position of the window edge on the page, value = 64 + change of the glass if the
+    edge cell (E) replaced what lies beyond the window (A), at the largest weight WM. On screen it is stretched from the
+    window edge over the bar and weighted per row (plus-lighter, then -64 by a plus-darker layer). */
+ var NA=40,FC=PR+'uniform sampler2D T,C;uniform vec2 E2;uniform float DIR,PY,SO,WM,AS,EG,AW['+NA+'];'+TONE+
+  'void main(){vec3 e=.5*(texture2D(T,v+vec2(0.,DIR*E2.x*PY)).rgb+texture2D(T,v+vec2(0.,DIR*E2.y*PY)).rgb),a=vec3(0.);'+
+  'for(int i=0;i<'+NA+';i++){a+=AW[i]*texture2D(T,v-vec2(0.,DIR*(float(i)+.5)*AS*PY)).rgb;}'+
+  'vec3 u=texture2D(C,v+vec2(0.,DIR*SO*PY)).rgb;vec3 d=EG*4.*(tone(u+.25*WM*(e-a))-tone(u));gl_FragColor=vec4(clamp((64.+d)/255.,0.,1.),1.);}';
  function sh(t,s){var o=g.createShader(t);g.shaderSource(o,s);g.compileShader(o);if(!g.getShaderParameter(o,g.COMPILE_STATUS))throw g.getShaderInfoLog(o);return o}
  function prog(fs){var p=g.createProgram();g.attachShader(p,sh(g.VERTEX_SHADER,VS));g.attachShader(p,sh(g.FRAGMENT_SHADER,fs));g.bindAttribLocation(p,0,'p');g.linkProgram(p);if(!g.getProgramParameter(p,g.LINK_STATUS))throw g.getProgramInfoLog(p);p.u={};return p}
  function U(p,n){return p.u[n]||(p.u[n]=g.getUniformLocation(p,n))}
@@ -354,23 +365,41 @@ GLS=(function(){
   cv=document.createElement('canvas');cv.width=cv.height=4;
   g=cv.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false})||cv.getContext('experimental-webgl');
   if(!g)return false;
-  P.d=prog(FD);P.b=prog(FB);P.g=prog(FG);
+  P.d=prog(FD);P.b=prog(FB);P.g=prog(FG);P.c=prog(FC);
   var vb=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,vb);g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),g.STATIC_DRAW);g.enableVertexAttribArray(0);g.vertexAttribPointer(0,2,g.FLOAT,false,0,0);
   var i,a=new Uint8Array(256);T.l=tx(0,0);for(i=0;i<256;i++)a[i]=Math.round(LUT[i]);g.texImage2D(g.TEXTURE_2D,0,g.ALPHA,256,1,0,g.ALPHA,g.UNSIGNED_BYTE,a);
   T.s=tx(0,0);M.max=g.getParameter(g.MAX_TEXTURE_SIZE);g.disable(g.BLEND);
   cv.addEventListener('webglcontextlost',function(e){e.preventDefault();off()});return true}
  /* whole-page glass picture from the page picture (texture T.s, W x H CSS px): downsample to GR, blur, iOS brightness/colour */
- function glassOf(W,H,cb){var s=Math.min(GR,(M.max||4096)/H),OW=Math.max(1,Math.ceil(W*s)),OH=Math.max(1,Math.ceil(H*s)),A=fbo(OW,OH),B=fbo(OW,OH),i;
+ /* window of iOS around the bar in page px (set by take() from the bar position) */
+ var WINP={l:0,r:1e5,f:1};
+ function erfc(x){var z=Math.abs(x),t=1/(1+.5*z),r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196+t*(.09678418+t*(-.18628806+t*(.27886807+t*(-1.13520398+t*(1.48851587+t*(-.82215223+t*.17087277)))))))));return x>=0?r:2-r}
+ function wTail(z){return .755*.5*erfc(z/13.26/Math.SQRT2)+.245*.5*erfc(z/25.7/Math.SQRT2)}   /* blur weight beyond z pt */
+ /* EGAIN: measured iOS answer to a white edge cell is ~1.5x what the blur model gives (line tests 22.10.2026) */
+ var WT0=15,WB0=BH+13.67,WMX=.37,EGAIN=+((/[?&]eg=([\d.]+)/.exec(location.search)||[])[1]||1.5);
+ function glassOf(W,H,cb){var mx=M.max||4096,s=Math.min(GR,mx/H),sy=Math.min(1,mx/H),OW=Math.max(1,Math.ceil(W*s)),OH=Math.max(1,Math.ceil(H*s)),OY=Math.max(1,Math.ceil(H*sy)),OC=Math.max(1,Math.ceil(W*s/2)),
+   A=fbo(OW,OY),B=fbo(OW,OY),C=fbo(OW,OY),R=fbo(OW,OH),Q=fbo(OC,OY),i,outs=[],f=WINP.f;
+  /* the picture is worked at 2 pt across and 1 pt down (window edges need the finer rows); base glass 2 pt, edge pictures 4 x 1 pt */
   try{g.activeTexture(g.TEXTURE0);
-   g.useProgram(P.d);g.bindTexture(g.TEXTURE_2D,T.s);g.uniform1i(U(P.d,'S'),0);g.uniform2f(U(P.d,'Z'),OW/s/W,OH/s/H);g.uniform2f(U(P.d,'D'),.5/W,.5/H);g.uniform1f(U(P.d,'G'),GAM);pass(P.d,A,OW,OH);
+   g.useProgram(P.d);g.bindTexture(g.TEXTURE_2D,T.s);g.uniform1i(U(P.d,'S'),0);g.uniform2f(U(P.d,'Z'),OW/s/W,OY/sy/H);g.uniform2f(U(P.d,'D'),.5/W,.5/H);g.uniform1f(U(P.d,'G'),GAM);pass(P.d,A,OW,OY);
    g.useProgram(P.b);g.uniform1fv(U(P.b,'W'),KW);g.uniform1i(U(P.b,'T'),0);
-   g.bindTexture(g.TEXTURE_2D,A.t);g.uniform2f(U(P.b,'D'),1/OW,0);pass(P.b,B,OW,OH);
-   g.bindTexture(g.TEXTURE_2D,B.t);g.uniform2f(U(P.b,'D'),0,1/OH);pass(P.b,A,OW,OH);
-   g.useProgram(P.g);g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,T.l);g.uniform1i(U(P.g,'L'),1);g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,A.t);g.uniform1i(U(P.g,'T'),0);g.uniform1f(U(P.g,'G'),GAM);pass(P.g,B,OW,OH);
-   var px=new Uint8Array(OW*OH*4);g.bindFramebuffer(g.FRAMEBUFFER,B.f);g.readPixels(0,0,OW,OH,g.RGBA,g.UNSIGNED_BYTE,px);g.bindFramebuffer(g.FRAMEBUFFER,null)}
-  finally{g.deleteFramebuffer(A.f);g.deleteFramebuffer(B.f);g.deleteTexture(A.t);g.deleteTexture(B.t)}
-  var c=document.createElement('canvas');c.width=OW;c.height=OH;var x=c.getContext('2d'),id=x.createImageData(OW,OH);id.data.set(px);x.putImageData(id,0,0);
-  if(c.toBlob)c.toBlob(function(b){cb(b?URL.createObjectURL(b):null,true)},'image/png');else cb(c.toDataURL('image/png'),false)}
+   /* across: only the window columns (edge column repeated, as iOS) */
+   g.bindTexture(g.TEXTURE_2D,A.t);g.uniform4f(U(P.b,'CL'),Math.max(0,WINP.l/W),0,Math.min(1,WINP.r/W),1);g.uniform2f(U(P.b,'D'),1/OW,0);pass(P.b,B,OW,OY);
+   g.bindTexture(g.TEXTURE_2D,B.t);g.uniform4f(U(P.b,'CL'),0,0,1,1);g.uniform2f(U(P.b,'D'),0,2*sy/OY);pass(P.b,C,OW,OY);
+   var rd=function(F,w,h){var px=new Uint8Array(w*h*4);g.bindFramebuffer(g.FRAMEBUFFER,F.f);g.readPixels(0,0,w,h,g.RGBA,g.UNSIGNED_BYTE,px);g.bindFramebuffer(g.FRAMEBUFFER,null);outs.push([px,w,h])};
+   g.useProgram(P.g);g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,T.l);g.uniform1i(U(P.g,'L'),1);g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,C.t);g.uniform1i(U(P.g,'T'),0);g.uniform1f(U(P.g,'G'),GAM);pass(P.g,R,OW,OH);rd(R,OW,OH);
+   /* beyond-the-edge average A: 2 pt apart, weights = blur weight of the row 3 pt outside the bar (12 pt from the edge) */
+   var tp=sy*f,dz=2,aw=[],sum=0;for(i=0;i<NA;i++){var z=(i+.5)*dz;aw.push(wTail(12+z-dz/2)-wTail(12+z+dz/2));sum+=aw[i]}for(i=0;i<NA;i++)aw[i]/=sum;
+   g.useProgram(P.c);g.activeTexture(g.TEXTURE2);g.bindTexture(g.TEXTURE_2D,C.t);g.uniform1i(U(P.c,'C'),2);g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,T.l);g.uniform1i(U(P.c,'L'),1);
+   g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,B.t);g.uniform1i(U(P.c,'T'),0);g.uniform1f(U(P.c,'G'),GAM);g.uniform1fv(U(P.c,'AW'),aw);g.uniform1f(U(P.c,'PY'),1/OY);g.uniform1f(U(P.c,'WM'),WMX);
+   /* E: the edge cell (2.667 pt) sampled at 1/4 and 3/4 of it; offsets in texels (tp per pt) */
+   g.uniform2f(U(P.c,'E2'),.6667*tp,2*tp);g.uniform1f(U(P.c,'AS'),dz*tp);g.uniform1f(U(P.c,'EG'),EGAIN);
+   g.uniform1f(U(P.c,'DIR'),1);g.uniform1f(U(P.c,'SO'),(WT0+3)*tp);pass(P.c,Q,OC,OY);rd(Q,OC,OY);
+   g.uniform1f(U(P.c,'DIR'),-1);g.uniform1f(U(P.c,'SO'),(WB0-BH+3)*tp);pass(P.c,Q,OC,OY);rd(Q,OC,OY)}
+  finally{[A,B,C,R,Q].forEach(function(o){g.deleteFramebuffer(o.f);g.deleteTexture(o.t)})}
+  var urls=[],k=0;
+  (function nx(){if(k>=outs.length){cb(urls,!!document.createElement('canvas').toBlob);return}var o=outs[k++],c=document.createElement('canvas');c.width=o[1];c.height=o[2];var x=c.getContext('2d'),id=x.createImageData(o[1],o[2]);id.data.set(o[0]);x.putImageData(id,0,0);
+   if(c.toBlob)c.toBlob(function(b){urls.push(b?URL.createObjectURL(b):null);nx()},'image/png');else{urls.push(c.toDataURL('image/png'));nx()}})()}
  /* static layers from the iOS per-pixel rim map (RIM: out = A + Kl*L + Kc*(G-L) + beta*page) and the edge geometry */
  function png(w,h,fill){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d'),id=x.createImageData(w,h);fill(id.data);x.putImageData(id,0,0);return c.toDataURL('image/png')}
  function edt1(f,n,o,v,z){var k=0,q,s;v[0]=0;z[0]=-1e20;z[1]=1e20;
@@ -390,9 +419,22 @@ GLS=(function(){
   out.mul=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?Math.min(1,Math.max(0,map.kl[i]/al)):1;d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(v*255);d[i*4+3]=255}});
   out.add=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?map.a[i]/al:0;v=Math.max(0,Math.min(255,v));d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(v);d[i*4+3]=255}});
   out.sub=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?-map.a[i]/al:0;v=Math.max(0,Math.min(255,v));d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(255-v);d[i*4+3]=255}});
+  /* window-edge weights per pixel: blur weight beyond the edge for the row the glass is sampled from (refraction DT) */
+  var DT=[25,85,133,153,151,150,149,148,147,146,145,145,143,142,142,141,140,140,139,138,137,137,136,135,134,134,134,133,132,132,132,131,131,131,130,130,131,130,130,130,130,129,129,129,128,128,128,127,128,128,128,128,128,129,129,128,128,128,128,128,128,128,128,128],
+   AT=new Float32Array(N),AB=new Float32Array(N);
+  for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var bu=y/3-MP,bx2=x/3-MP,tt=T3[i],us=bu;
+   if(cov[i*4+3]>0){var tp=Math.round(tt*3),dd=tp<DT.length?(DT[tp]-128)/12:0,cx2=bx2<31?31:(bx2>BW-31?BW-31:bx2),ny=bx2<31||bx2>BW-31?(BH/2-bu)/Math.max(.5,Math.hypot(cx2-bx2,BH/2-bu)):(bu<BH/2?1:-1);us=bu+dd*ny}
+   AT[i]=Math.min(1,wTail(us+WT0)/WMX);AB[i]=Math.min(1,wTail(WB0-us)/WMX)}
+  out.wt=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=Math.round(AT[i]*255)});
+  out.wb=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=Math.round(AB[i]*255)});
+  out.w64=png(W3,H3,function(d){for(i=0;i<N;i++){var v=255-Math.round(64*(Math.round(AT[i]*255)+Math.round(AB[i]*255))/255);d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}});
   out.sat=png(W3,H3,function(d){for(i=0;i<N;i++){var s=map.kl[i]>.05?map.kc[i]/map.kl[i]:1,w=Math.min(1,Math.max(0,(s-1)/(SMAX-1)));d[i*4+3]=Math.round(w*255)}});
-  out.bands=BANDS.map(function(bd){return ['l','s','r'].map(function(rg){return png(W3,H3,function(d){for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var bx=x/3-MP,t=T3[i],
-     r=bx<31?'l':(bx>BW-31?'r':'s');if(r!==rg)continue;var a=(bd[0]<=0?1:sm(bd[0]-FE,bd[0]+FE,t))*(1-sm(bd[1]-FE,bd[1]+FE,t));d[i*4+3]=Math.round(a*255)}})})});
+  /* ends (l, r) and the straight part (s) blend over 26..36 pt: the s copy lies on top with a soft edge, no seam */
+  out.bands=BANDS.map(function(bd){var o={};['l','r','s'].forEach(function(rg){o[rg]=png(W3,H3,function(d){for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var bx=x/3-MP,t=T3[i],
+     wl=1-sm(26,36,bx),wr=sm(BW-36,BW-26,bx),w=rg==='l'?(bx<36?1:0):(rg==='r'?(bx>BW-36?1:0):(1-wl)*(1-wr));if(w<=0)continue;
+     /* a band fades in at its outer edge and stays opaque until the next band (drawn over it) is fully in: no unrefracted
+        picture shows through between bands; only the last band fades out */
+     var f0=FEo(bd[0]),f1=FEo(bd[1]),last=bd===BANDS[BANDS.length-1],a=w*(bd[0]<=0?1:sm(bd[0]-f0,bd[0]+f0,t))*(last?1-sm(bd[1]-f1,bd[1]+f1,t):(t<bd[1]+f1?1:0));d[i*4+3]=Math.round(a*255)}})});return o});
   cb(out)}
  /* the iOS map, embedded as a PNG: left 142 columns + middle column (right side mirrored) */
  function rimMap(cb){var im=new Image();im.onload=function(){try{var c=document.createElement('canvas');c.width=im.width;c.height=im.height;var x=c.getContext('2d');x.drawImage(im,0,0);
@@ -403,30 +445,44 @@ GLS=(function(){
  function mskCss(url){return '-webkit-mask-image:url('+url+');mask-image:url('+url+');-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;'}
  function build(L){var ab='position:absolute;left:0;top:0;width:'+BWX+'px;height:'+BHX+'px;pointer-events:none;';
   WIN=el('div',ab+'left:'+(-MP)+'px;top:'+(-MP)+'px;isolation:isolate;background:rgb(32,32,32);'+mskCss(L.mask));WIN.className='gwin';WIN.setAttribute('aria-hidden','true');
-  function glassLayer(parent,tf){var gp=el('div','position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0',parent),host=gp,ln=null;
+  function glassLayer(parent,tf,kind){var gp=el('div','position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0',parent),host=gp,ln=null;
    if(tf){ln=el('div','position:absolute;left:0;top:0;width:0;height:0',gp);ln._tf=tf;LENS.push(ln);host=ln}
-   var im=el('img','position:absolute;left:0;top:0;width:1px;height:1px;max-width:none',host);im.className='gimg';im.alt='';im.decoding='sync';GPG.push(gp);IMGS.push(im)}
+   var im=el('img','position:absolute;left:0;top:0;width:1px;height:1px;max-width:none',host);im.className='gimg';im.alt='';im.decoding='sync';im._k=kind||0;GPG.push(gp);IMGS.push(im)}
   glassLayer(WIN,null);
-  BANDS.forEach(function(bd,bi){['l','s','r'].forEach(function(rg,ri){var b=el('div',ab+mskCss(L.bands[bi][ri]),WIN);glassLayer(b,[rg,bd[2]])})});
+  BANDS.forEach(function(bd,bi){['l','r','s'].forEach(function(rg){var b=el('div',ab+mskCss(L.bands[bi][rg]),WIN);glassLayer(b,[rg,bd[2]])})});
+  /* window edges of iOS: picture of the change at the edge, stretched from the edge line over the bar (scale 1:100 about it),
+     weighted per row by the mask; both pictures carry +64, taken off by one plus-darker layer */
+  [['et',1,L.wt],['eb',2,L.wb]].forEach(function(q){var b=el('div',ab+mskCss(q[2])+'mix-blend-mode:plus-lighter',WIN);glassLayer(b,[q[0],100],q[1])});
+  if(CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.w64+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
   /* order: x Kl, + A, - |A| (dark ring), then the colour gain last: no channel is cut at 0 or 255 before the end */
   el('div',ab+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
   el('div',ab+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);
   if(CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.sub+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
   el('div',ab+'-webkit-backdrop-filter:saturate('+SMAX+');backdrop-filter:saturate('+SMAX+');'+mskCss(L.sat),WIN);
   CAP=el('div','position:absolute;left:0;top:0;width:0;height:0;opacity:0;-webkit-backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2);backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2)',WIN);
+  /* capsule outline = path() of the canvas menu (iOS shape, not a plain stadium): end caps from its resting shape, scaled with
+     the height, and a plain middle; the caps are flat to 0.01 pt at CAPC from the ends */
+  var cs=CAP.style,sv=function(x0){return 'url("data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="'+CAPC+'" height="'+PH+'" viewBox="'+x0+' 0 '+CAPC+' '+PH+'"><path d="'+path(PW,PH,0,0)+'"/></svg>')+'")'};
+  cs.webkitMaskImage=cs.maskImage=sv(0)+','+sv(PW-CAPC)+',linear-gradient(#000,#000)';cs.webkitMaskRepeat=cs.maskRepeat='no-repeat';
   $('glass').appendChild(WIN)}
  /* where the window is on screen and how the glass picture sits under it (viewport px); the scroll itself is Safari's */
- function place(){if(!WIN)return;var r=WIN.getBoundingClientRect(),f=r.width/BWX||1,i;geo={l:r.left,t:r.top,f:f};
+ function place(){if(!WIN)return;var r=WIN.getBoundingClientRect(),f=r.width/BWX||1,i,v=window.visualViewport,dk=document.getElementById('dock'),gt=r.top,gl=r.left;
+  /* while Safari moves its toolbar the rects come shifted by the visual viewport offset for a moment (18 pt seen): take the
+     dock's own CSS top (layout, stable) when the page is not pinch-zoomed */
+  if(dk&&!dk.style.transform&&(!v||v.scale<1.01)){var dr=dk.getBoundingClientRect(),ct=parseFloat(getComputedStyle(dk).top);if(isFinite(ct))gt=ct+(r.top-dr.top);if(v)gl=r.left+v.offsetLeft}
+  geo={l:gl,t:gt,f:f};LG('place');
   for(i=0;i<GPG.length;i++)GPG[i].style.transform='scale('+(1/f).toFixed(5)+')';
-  for(i=0;i<LENS.length;i++){var t=LENS[i]._tf,s=t[1],oy=(BH/2+MP)*f,ox=(t[0]==='l'?31+MP:(t[0]==='r'?BW-31+MP:0))*f;
-   LENS[i].style.transformOrigin=ox.toFixed(2)+'px '+oy.toFixed(2)+'px';LENS[i].style.transform=t[0]==='s'?'scale(1,'+s+')':'scale('+s+')'}
+  for(i=0;i<LENS.length;i++){var t=LENS[i]._tf,s=t[1],oy=(t[0]==='et'?MP-WT0:(t[0]==='eb'?MP+WB0:BH/2+MP))*f,ox=(t[0]==='l'?31+MP:(t[0]==='r'?BW-31+MP:0))*f;
+   LENS[i].style.transformOrigin=ox.toFixed(2)+'px '+oy.toFixed(2)+'px';LENS[i].style.transform=t[0]==='l'||t[0]==='r'?'scale('+s+')':'scale(1,'+s+')'}
   if(cur)fit(cur)}
  function fit(e){for(var i=0;i<IMGS.length;i++){var s=IMGS[i].style;s.left=(-geo.l).toFixed(2)+'px';s.top=(e.y0-geo.t).toFixed(2)+'px';s.width=e.w+'px';s.height=e.h+'px'}}
- function show(e){if(!e||e===cur)return;var old=cur;cur=e;var pre=new Image();pre.src=e.url;
-  var go=function(){if(cur!==e)return;fit(e);for(var i=0;i<IMGS.length;i++)IMGS[i].src=e.url;restart();M.ver++;if(old&&old.blob&&!used(old))setTimeout(function(){if(!used(old))URL.revokeObjectURL(old.url)},1000)};
-  if(pre.decode)pre.decode().then(go,go);else pre.onload=go}
+ function show(e){if(!e||e===cur)return;var old=cur;cur=e;var us=(e.urls||[e.url]).filter(Boolean),left=us.length,go1=function(){if(--left===0)go()};
+  var go=function(){if(cur!==e)return;place();fit(e);LG('show',{y0:e.y0});for(var i=0;i<IMGS.length;i++)IMGS[i].src=e.urls[IMGS[i]._k]||e.url;restart();M.ver++;if(old&&old.blob&&!used(old))setTimeout(function(){if(!used(old))freeE(old)},1000)};
+  /* all pictures decoded first: the layers change in one frame */
+  us.forEach(function(u){var pre=new Image();pre.src=u;if(pre.decode)pre.decode().then(go1,go1);else{pre.onload=pre.onerror=go1}})}
  /* Safari keeps a scroll-driven animation that started before the picture was set frozen on its compositor: restart it */
  function restart(){if(!SDA)return;var i;for(i=0;i<IMGS.length;i++)IMGS[i].style.animation='none';void WIN.offsetWidth;for(i=0;i<IMGS.length;i++)IMGS[i].style.animation=''}
+ function freeE(e){(e.urls||[e.url]).forEach(function(u){if(u)URL.revokeObjectURL(u)})}
  function used(e){if(e===cur)return true;for(var k in SN)if(SN[k]===e)return true;return false}
  /* page pictures: one per screen of #app (the 4 tabs), page CSS, animations stopped at their end state; other screens are
     taken in advance while nothing happens; not while a finger is down or the page scrolls (it costs a moment on a phone),
@@ -442,7 +498,7 @@ GLS=(function(){
   for(i=0;i<n;i++)if(!SN[i]||dirty[i])return i;return -1}
  function take(){st=0;if(!M.on)return;if(busy){again=1;return}var which=pick();if(which===-2){st=setTimeout(take,250);return}if(which<0)return;
   var app=document.getElementById('app');if(!app)return;busy=true;var t0=performance.now(),live=which===liveScr();delete dirty[which];if(!Object.keys(dirty).length)dirtyAt=0;
-  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),y0=ar.top+(window.pageYOffset||0),H,
+  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),y0=ar.top-de.getBoundingClientRect().top,H,_lg=LG('take',{art:ar.top}),
    li=app.querySelectorAll('input,textarea,select'),cl=app.cloneNode(true),ci=cl.querySelectorAll('input,textarea,select'),i,css='',xs=new XMLSerializer();
    for(i=0;i<li.length&&i<ci.length;i++){if(li[i].type==='checkbox'||li[i].type==='radio'){if(li[i].checked)ci[i].setAttribute('checked','');else ci[i].removeAttribute('checked')}else ci[i].setAttribute('value',li[i].value)}
    var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++){if((+sc[i].getAttribute('data-scr')||0)===which){if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].className+=' on'}else sc[i].parentNode.removeChild(sc[i])}
@@ -458,8 +514,9 @@ GLS=(function(){
     '<html xmlns="http://www.w3.org/1999/xhtml"><head><style>'+esc(css)+'</style></head><body class="'+esc(document.body.className)+'"><div style="position:relative;width:'+W+'px;height:'+H+'px;transform:scale('+s+');transform-origin:0 0">'+(sp?xs.serializeToString(sp):'')+xs.serializeToString(cl)+'</div></body></html></foreignObject></svg>';
    var hasImg=!!cl.querySelector('img'),im=new Image();M.st.take=Math.round(performance.now()-t0);t0=performance.now();
    var make=function(fin){var t1=performance.now();try{g.bindTexture(g.TEXTURE_2D,T.s);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,im);
-     glassOf(W,H,function(url,blob){M.st.up=Math.round(performance.now()-t1);if(url&&/[?&]glsdump/.test(location.search)){try{var q=new XMLHttpRequest();q.open('GET',url);q.responseType='blob';q.onload=function(){var z=new XMLHttpRequest();z.open('POST','/glassimg?H='+H+'&y0='+y0);z.send(q.response)};q.send()}catch(_){}}if(!url||!M.on){fin();return}var e={url:url,blob:blob,y0:y0,w:W,h:H},old=SN[which];SN[which]=e;M.st.n++;
-      if(which===curScr)show(e);if(old&&old!==cur&&old.blob)URL.revokeObjectURL(old.url);fin()})}catch(x){M.err='glass '+x;fin()}};
+     if(WIN){var wr=WIN.getBoundingClientRect(),wf=wr.width/BWX||1;WINP={l:wr.left+(MP-15.67)*wf,r:wr.right-(MP-15.67)*wf,f:wf}}
+     glassOf(W,H,function(urls,blob){var url=urls&&urls[0];M.st.up=Math.round(performance.now()-t1);if(url&&/[?&]glsdump/.test(location.search)){(urls||[]).forEach(function(u,n){try{var q=new XMLHttpRequest();q.open('GET',u);q.responseType='blob';q.onload=function(){var z=new XMLHttpRequest();z.open('POST','/glassimg'+n+'?H='+H+'&y0='+y0);z.send(q.response)};q.send()}catch(_){}})}if(!url||!M.on){fin();return}var e={url:url,urls:urls,blob:blob,y0:y0,w:W,h:H},old=SN[which];LG('made',{y0:y0,which:which,H:H});SN[which]=e;M.st.n++;
+      if(which===curScr)show(e);if(old&&old!==cur&&old.blob)freeE(old);fin()})}catch(x){M.err='glass '+x;fin()}};
    im.onload=function(){M.st.load=Math.round(performance.now()-t0);M.img=im;
     /* <img> inside the picture decode a moment later (none on the bank page): make it once more */
     make(function(){if(hasImg)setTimeout(function(){make(done)},350);else done();if(/[?&]glsdump/.test(location.search)&&which===curScr){dump(im,y0,W,H);stat()}})};
@@ -472,11 +529,14 @@ GLS=(function(){
  function strip(s){return (s||'').replace(/(^|\s)down(?=\s|$)/g,' ').replace(/\s+/g,' ').trim()}
  /* selected-tab capsule: a backdrop-filter element over the glass (iOS: 0.87 brightness, -18, colour 1.2) */
  M.caps=function(cx,hw,hh,a){if(!M.on||!CAP)return;var k=[cx,hw,hh,a].map(function(n){return n.toFixed(2)}).join();if(k===capKey)return;capKey=k;var s=CAP.style;
-  s.left=(cx-hw+MP).toFixed(2)+'px';s.top=(BH/2-hh+MP).toFixed(2)+'px';s.width=(2*hw).toFixed(2)+'px';s.height=(2*hh).toFixed(2)+'px';s.borderRadius=hh.toFixed(2)+'px';s.opacity=a.toFixed(3)};
+  s.left=(cx-hw+MP).toFixed(2)+'px';s.top=(BH/2-hh+MP).toFixed(2)+'px';s.width=(2*hw).toFixed(2)+'px';s.height=(2*hh).toFixed(2)+'px';s.opacity=a.toFixed(3);
+  var cw=CAPC*2*hh/PH,mid=Math.max(0,2*hw-2*cw);s.webkitMaskSize=s.maskSize='auto 100%,auto 100%,'+mid.toFixed(2)+'px 100%';s.webkitMaskPosition=s.maskPosition='0 0,100% 0,'+cw.toFixed(2)+'px 0'};
  /* without scroll-driven animations (old browsers): move the glass from scripts (it lags there) */
  function jsScroll(){var y=-(window.pageYOffset||0);for(var i=0;i<IMGS.length;i++)IMGS[i].style.transform='translateY('+y+'px)'}
  function on(){var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';$('edge').style.display='none';WIN.style.display='';M.on=true;place();try{paint()}catch(_){}}
  function off(){M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(WIN)WIN.style.display='none';paint()}catch(_){}}
+ var LGQ=[],LGON=/[?&]glslog/.test(location.search);function LG(t,o){if(!LGON)return;o=o||{};o.t=t;o.ms=Math.round(performance.now());o.py=Math.round((window.pageYOffset||0)*10)/10;var v=window.visualViewport;if(v){o.vt=Math.round(v.offsetTop*10)/10;o.vh=Math.round(v.height*10)/10;o.vpt=Math.round(v.pageTop*10)/10}o.ih=window.innerHeight;o.ch=document.documentElement.clientHeight;if(WIN){var r=WIN.getBoundingClientRect();o.wt=Math.round(r.top*10)/10}var d=document.getElementById('dock');if(d){o.dt=Math.round(d.getBoundingClientRect().top*10)/10;o.dcs=getComputedStyle(d).top}if(IMGS[0]){var cs=getComputedStyle(IMGS[0]);o.tf=cs.transform;o.it=IMGS[0].style.top}o.gt=Math.round(geo.t*10)/10;LGQ.push(JSON.stringify(o))}
+ if(LGON){setInterval(function(){LG('tick')},100);setInterval(function(){if(!LGQ.length)return;try{var x=new XMLHttpRequest();x.open('POST','/glslog');x.send(LGQ.join('\n'));LGQ=[]}catch(_){}},400);window.addEventListener('resize',function(){LG('resize')});if(window.visualViewport)visualViewport.addEventListener('resize',function(){LG('vvresize')})}
  M.dbg=function(){var i=IMGS[0];if(!i)return 'noimg';var cs=getComputedStyle(i);return [SDA,cs.animationName,cs.transform,(cs.animationTimeline||cs.webkitAnimationTimeline||'?'),window.pageYOffset,i.style.top,i.src.slice(0,30)].join('|')};
  M.off=off;M.snap=sched;M.size=function(){if(M.on)place()};
  M.start=function(){try{if(!init())return;rimMap(function(m){if(!m){off();return}layers(m,function(L){try{build(L);start2()}catch(e){M.err='build '+e;off()}})})}catch(e){M.err='start '+e;off()}};
