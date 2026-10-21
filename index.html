@@ -425,7 +425,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 94</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 95</p>
  </div>
 </section>
 
@@ -624,8 +624,8 @@ $$('#segc button').forEach(function(b){b.addEventListener('click',function(){set
 var cur=0,TITLES=['Главная','Тариф','Расходы','Поддержка'],nav=$('#nav'),navt=$('#navt');
 function go(i){if(i===cur){window.scrollTo(0,0);return}var a=$('.scr[data-scr="'+cur+'"]'),b=$('.scr[data-scr="'+i+'"]');a.classList.remove('on');
  b.style.setProperty('--dx',(i>cur?24:-24)+'px');b.classList.add('on');cur=i;navt.textContent=TITLES[i];window.scrollTo(0,0);applyAll();if(i===2)setPer(1);
- try{$('#dock').contentWindow.postMessage({itbSet:i},'*')}catch(_){}}
-window.addEventListener('message',function(e){var d=e.data;if(d&&d.itbReady)$('#dock').style.visibility='visible';if(d&&typeof d.itb==='number'&&d.itb!==cur)go(d.itb)});setTimeout(function(){$('#dock').style.visibility='visible'},4000);
+ try{if(window.ITB)ITB.set(i)}catch(_){}}
+window.ITBH={sel:function(i){if(i!==cur)go(i)},ready:function(){$('#dock').style.visibility='visible'}};setTimeout(function(){$('#dock').style.visibility='visible'},4000);
 var ticking=false;window.addEventListener('scroll',function(){if(ticking)return;ticking=true;requestAnimationFrame(function(){ticking=false;nav.classList.toggle('on',(window.pageYOffset||0)>(cur?40:64))})},{passive:true});
 
 try{if(navigator.deviceMemory&&navigator.deviceMemory<=2)document.documentElement.classList.add('lowfx')}catch(_){}
@@ -641,5 +641,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<div class="fade" aria-hidden="true"></div><div class="edgefill" aria-hidden="true"></div><iframe class="dock" id="dock" src="menu.html?v=94" title="Меню разделов" scrolling="no" allowtransparency="true"></iframe>
+<div class="fade" aria-hidden="true"></div><div class="edgefill" aria-hidden="true"></div><div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=95"></script>
 </body></html>

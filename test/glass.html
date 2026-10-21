@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Проверка стекла меню</title>
+<style>
+/* Test page for the menu glass: patterns from spec.json are placed in the coordinates of the iOS test app
+   (iOS tab bar at x 21..381, y 791..853 pt) shifted so that they sit the same way under our bar. */
+:root{color-scheme:dark;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;background:#000}
+.app{position:relative;width:100%;height:100vh;overflow:hidden;background:var(--bg,#000)}
+.app i{position:absolute;display:block}
+.app img{position:absolute;image-rendering:pixelated}
+.dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 5px);z-index:20;display:block;width:100%;height:80px;visibility:hidden;border:0;background:transparent;color-scheme:dark}
+</style></head><body>
+<main class="app" id="app"></main>
+<script>
+(function(){
+var app=document.getElementById('app'),last=-1,ox=0,oy=0;
+window.ITBH={sel:function(){},ready:function(){document.getElementById('dock').style.visibility='visible'}};
+setTimeout(function(){document.getElementById('dock').style.visibility='visible'},3000);
+function col(a){return a?'rgba('+a[0]+','+a[1]+','+a[2]+','+(a.length>3?a[3]:1)+')':'#000'}
+function apply(j){var sy=j.sy||0;app.style.height=(j.h?j.h+'px':'');window.scrollTo(0,0);var b=document.getElementById('itb-bar').getBoundingClientRect();ox=b.left-21;oy=b.top-791+sy;
+ var h='';app.style.background=col(j.bg);
+ if(j.img&&!j.imgData){var L=new Image();L.onload=function(){var c=document.createElement('canvas');c.width=L.width;c.height=L.height;c.getContext('2d').drawImage(L,0,0);j.imgData=c.toDataURL('image/png');apply(j)};L.src='img/'+j.img;return}
+ /* pictures go in as data URLs: the page picture for the glass (SVG) cannot load files */
+ if(j.imgData)h+='<img src="'+j.imgData+'" style="left:'+(ox+(j.imgX||0))+'px;top:'+(oy+(j.imgY||0))+'px;width:'+(j.imgW||402)+'px">';
+ (j.rects||[]).forEach(function(r){h+='<i style="left:'+(ox+r[0])+'px;top:'+(oy+r[1])+'px;width:'+r[2]+'px;height:'+r[3]+'px;background:'+col(r.slice(4,7).concat(r.length>8?[r[8]]:[]))+(r[7]?';border-radius:'+r[7]+'px':'')+'"></i>'});
+ app.innerHTML=h;if(sy)window.scrollTo(0,sy);
+ var im=app.querySelector('img'),t0=Date.now();
+ var G0=window.ITB&&ITB.gls&&ITB.gls(),v0=G0?G0.ver:0;
+ function ack(){var n=0;(function w(){var G1=window.ITB&&ITB.gls&&ITB.gls();if(G1&&G1.on&&G1.ver<=v0&&n++<40){setTimeout(w,100);return}fire()})()}
+ function fire(){setTimeout(function(){var G=window.ITB&&ITB.gls&&ITB.gls();new Image().src='/ack?tok='+((/tok=(\w+)/.exec(location.search)||[])[1])+'&id='+j.id+'&bar='+[b.left,b.top,b.width,b.height].join(',')+'&dpr='+devicePixelRatio+'&gls='+encodeURIComponent(G?[G.on,G.ver,G.err].join('~'):'none')},j.wait||900)}
+ if(im&&!im.complete)im.onload=ack;else ack()}
+function poll(){var x=new XMLHttpRequest();x.open('GET','spec.json?'+Date.now());x.onload=function(){try{var j=JSON.parse(x.responseText);if(j.id!==last){last=j.id;apply(j)}}catch(_){}};x.send();setTimeout(poll,120)}
+if(/[?&]poll/.test(location.search))setTimeout(poll,600);
+if(/[?&]dump/.test(location.search))setTimeout(function(){var G=ITB.gls();var x=new XMLHttpRequest();x.open('POST','/dump');x.send(G.str||('none '+G.err))},3000);
+if(/[?&]snapdbg/.test(location.search))setInterval(function(){var G=window.ITB&&ITB.gls&&ITB.gls();if(!G||!G.img)return;var d=document.getElementById('dbg');if(!d){d=document.createElement('img');d.id='dbg';d.style.cssText='position:fixed;left:0;top:60px;width:200px;border:1px solid red;z-index:99;background:#333';document.body.appendChild(d)}if(d.src!==G.img.src)d.src=G.img.src},500);
+})();
+</script>
+<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=95"></script>
+</body></html>
