@@ -262,11 +262,6 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 @keyframes pop{from{transform:translateY(10px) scale(.975)}to{transform:none}}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important}}
-.fade{position:fixed;left:0;right:0;bottom:0;height:calc(72px + env(safe-area-inset-bottom,0px));z-index:19;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,.18) 18%,rgba(0,0,0,.45) 42%,rgba(0,0,0,.75) 68%,rgba(0,0,0,.93) 88%,#000 100%)}
-.fade::before,.fade::after{content:"";position:absolute;left:0;right:0;top:0;bottom:0}
-.fade::before{-webkit-backdrop-filter:blur(3px) brightness(.8);backdrop-filter:blur(3px) brightness(.8);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,0) 0,#000 40%);mask-image:linear-gradient(to bottom,rgba(0,0,0,0) 0,#000 40%)}
-.fade::after{-webkit-backdrop-filter:blur(9px) brightness(.55);backdrop-filter:blur(9px) brightness(.55);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,0) 25%,#000 85%);mask-image:linear-gradient(to bottom,rgba(0,0,0,0) 25%,#000 85%)}
-.lowfx .fade::before,.lowfx .fade::after{display:none}
 .edgefill{position:fixed;left:0;right:0;bottom:0;width:100%;height:4px;z-index:19;pointer-events:none;background-color:#000}
 </style></head>
 <body class="ld">
@@ -425,7 +420,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 95</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 96</p>
  </div>
 </section>
 
@@ -641,5 +636,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<div class="fade" aria-hidden="true"></div><div class="edgefill" aria-hidden="true"></div><div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=95"></script>
+<div class="edgefill" aria-hidden="true"></div><div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=96"></script>
 </body></html>

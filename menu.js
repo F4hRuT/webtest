@@ -167,7 +167,7 @@ function drawBase(cx,hw,hh,pk){if(!texW)return;var c=bctx,X=PADX+cx,Y=PADY+BH/2,
  c.setTransform(baseC.width/CW,0,0,baseC.height/CH,0,0);c.globalCompositeOperation='source-over';c.clearRect(0,0,CW,CH);
  c.drawImage(texW,0,0,CW,CH);
  c.globalCompositeOperation='destination-out';c.fillStyle='#000';c.fill(pp);c.globalCompositeOperation='source-over';
- c.save();c.clip(pp);c.globalAlpha=1-pk;c.fillStyle='#070707';c.fillRect(0,0,CW,CH);c.globalAlpha=1;if(pk>.003&&texOD){if(!Q)drawRefracted(c,X,Y,hw,hh,pk);else{var im=1/(1-(1-1/REFR.mag)*pk);for(var i=0;i<4;i++){var ax=PADX+CX0+PITCH*i,l=i?ax-PITCH/2:0,r=i<3?ax+PITCH/2:CW;if(r<X-hw||l>X+hw)continue;c.save();c.beginPath();c.rect(l,0,r-l,CH);c.clip();c.translate(ax,Y);c.scale(im,im);c.translate(-ax,-Y);c.drawImage(texO,0,0,CW,CH);c.restore()}}}else c.drawImage(texO,0,0,CW,CH);c.restore()}
+ c.save();c.clip(pp);if(GLS&&GLS.on)GLS.caps(cx,hw,hh,1-pk);else{c.globalAlpha=1-pk;c.fillStyle='#070707';c.fillRect(0,0,CW,CH);c.globalAlpha=1}if(pk>.003&&texOD){if(!Q)drawRefracted(c,X,Y,hw,hh,pk);else{var im=1/(1-(1-1/REFR.mag)*pk);for(var i=0;i<4;i++){var ax=PADX+CX0+PITCH*i,l=i?ax-PITCH/2:0,r=i<3?ax+PITCH/2:CW;if(r<X-hw||l>X+hw)continue;c.save();c.beginPath();c.rect(l,0,r-l,CH);c.clip();c.translate(ax,Y);c.scale(im,im);c.translate(-ax,-Y);c.drawImage(texO,0,0,CW,CH);c.restore()}}}else c.drawImage(texO,0,0,CW,CH);c.restore()}
 var LE={dark:.767,rimW:.867,rimIn:.733,shade:1,shadeO:1,kR:1,kD:1};
 var DARKA=[[0,.5],[.06,.5],[.16,.58],[.3,.64],[.5,.66],[.7,.64],[.84,.56],[.94,.42],[1,.4]];
 var RIMA=[[0.0,0.125],[0.04,0.125],[0.0616,0.1198],[0.0831,0.1145],[0.1047,0.1091],[0.1262,0.1036],[0.1478,0.0981],[0.1694,0.0926],[0.1909,0.0872],[0.2125,0.082],[0.2341,0.077],[0.2556,0.0721],[0.2772,0.0675],[0.2987,0.063],[0.3203,0.0588],[0.3419,0.0549],[0.3634,0.0513],[0.385,0.0479],[0.4066,0.0449],[0.4281,0.0421],[0.4497,0.0396],[0.4712,0.0374],[0.4928,0.0356],[0.5072,0.0355],[0.5288,0.037],[0.5503,0.0387],[0.5719,0.0408],[0.5934,0.043],[0.615,0.0455],[0.6366,0.0482],[0.6581,0.0512],[0.6797,0.0543],[0.7013,0.0577],[0.7228,0.0613],[0.7444,0.0651],[0.7659,0.069],[0.7875,0.0731],[0.8091,0.0774],[0.8306,0.0817],[0.8522,0.0862],[0.8738,0.0906],[0.8953,0.0951],[0.9169,0.0995],[0.9384,0.1038],[0.96,0.108],[1.0,0.108]];
@@ -281,8 +281,15 @@ barEl.addEventListener('keydown',function(e){var d=e.key==='ArrowRight'?1:e.key=
  setSel(i);startTap(i);an.rel=0;tabBtns[i].focus();go();e.preventDefault()});
 function snap(){if(!(FX&2))return;barEl.style.willChange='auto';barEl.style.left='0px';barEl.style.top='0px';var q=barEl.getBoundingClientRect(),p=window.devicePixelRatio||1;barEl.style.left=(Math.round(q.left*p)/p-q.left)+'px';barEl.style.top=(Math.round(q.top*p)/p-q.top)+'px'}
 function recomp(){if(!(FX&4))return;[baseC,edC].forEach(function(c){c.style.display='none';void c.offsetWidth;c.style.display=''})}
-function resize(){fit=Math.min(1,(window.innerWidth-16)/(BW*1.06));if(BASIC){barEl.style.transform='scale('+fit+')';return}sizeCanvas();paint();snap()}
+/* width of the page, not of the zoomed view: with pinch zoom innerWidth shrinks and the menu shrank with it */
+function resize(){fit=Math.min(1,((document.documentElement.clientWidth||window.innerWidth)-16)/(BW*1.06));if(BASIC){barEl.style.transform='scale('+fit+')';return}sizeCanvas();paint();snap()}
 window.addEventListener('resize',resize);
+/* pinch zoom: keep the menu at the bottom of what is on screen and at its normal size, like an app tab bar */
+var dockEl=document.getElementById('dock'),dockGap=-1;
+function pinVV(){var v=window.visualViewport;if(!v||!dockEl)return;var s=v.scale||1,Hl=document.documentElement.clientHeight;
+ if(s<1.01){if(dockEl.style.transform){dockEl.style.transform='';dockEl.style.transformOrigin=''}dockGap=Hl-dockEl.getBoundingClientRect().bottom;return}
+ if(dockGap<0)dockGap=5;dockEl.style.transformOrigin='0 100%';dockEl.style.transform='translate('+v.offsetLeft.toFixed(2)+'px,'+(v.offsetTop+v.height-Hl+dockGap*(1-1/s)).toFixed(2)+'px) scale('+(1/s).toFixed(4)+')';if(GLS)GLS.kick(300)}
+if(window.visualViewport){visualViewport.addEventListener('resize',pinVV);visualViewport.addEventListener('scroll',pinVV)}
 function rescale(){var n=Math.min(4,pxr()*vz());if(Math.abs(n-DPR)<.25||BASIC)return;DPR=n;TS=Math.max(2,DPR);sizeCanvas();buildTex();paint();if(GLS)GLS.size()}
 if(window.visualViewport)visualViewport.addEventListener('resize',function(){clearTimeout(rescale.t);rescale.t=setTimeout(rescale,150)});
 try{if(!window.Path2D||!window.CanvasRenderingContext2D)throw 0;setSel(0);buildTex();resize();go()}catch(_){basic();setSel(0)}
@@ -305,103 +312,156 @@ setTimeout(intro,2000);
 try{dbg()}catch(_){}
 [400,1200,2500].forEach(function(t){setTimeout(function(){if(!raf)recomp()},t)});
 window.ITB={gls:function(){return GLS},set:function(i){if(i===sel)return;setSel(i);if(BASIC)return;startTap(i);an.rel=0;go()}};
-/* ---------- liquid glass (iOS 27 tab bar): the bar shows the page under it, blurred and tinted like iOS.
-   A picture of the page (SVG foreignObject) is cut to the bar area + 16 pt around it (iOS sees nothing farther),
-   blurred (measured: 95% wide blur 13.3 pt + 25% of it at 25.7 pt, 5% almost sharp), then brightness curve and
-   colour kept at 85..63% like iOS. Over black the result equals the v93 look exactly. ---------- */
+/* ---------- liquid glass (iOS 27 tab bar), measured on a real iOS 27 tab bar (tools/glass-app, numbers in CLAUDE.md).
+   A picture of the page (#app, SVG foreignObject) is cut to the bar + 16 pt around it (iOS sees nothing farther), blurred,
+   bent near the edge (sampling moved along the edge normal), then brightness curve + colour like iOS. The v93 strokes,
+   fill and soft spot are drawn in the same canvas, so the edge stays smooth over any colour; each pixel of the rim takes
+   the glass with its own iOS gains (brightness Kl, colour Kc by distance to the edge and edge angle). Over black: v93. ---------- */
 GLS=(function(){
- var M={on:false,err:'',ver:0,kick:function(){},snap:function(){}},cv,g,P={},T={},F={},snap={ok:false,ver:0},busy=false,again=0,st=0,raf=0,until=0,lastKey='',dpr=0;
- var MG=16,UW=BW+2*MG,UH=BH+2*MG,CU=2,TW=Math.round(UW/CU),TH=Math.round(UH/CU),GAM=.932,SHARP=.053;
- var LUT=[28.9,29.5,30.1,30.8,31.4,32.1,32.7,33.4,34.0,34.6,35.2,35.9,36.5,37.1,37.8,38.4,39.0,39.6,40.2,40.8,41.4,42.1,42.7,43.3,43.9,44.4,44.9,45.4,45.9,46.5,47.0,47.5,48.0,48.6,49.2,49.9,50.5,51.1,51.8,52.4,53.0,53.5,54.0,54.5,55.0,55.5,56.0,56.5,57.0,57.6,58.2,58.9,59.5,60.1,60.7,61.4,62.0,62.5,63.0,63.5,64.0,64.5,65.0,65.5,66.0,66.5,67.0,67.5,68.0,68.5,69.0,69.5,70.0,70.5,71.0,71.5,72.0,72.5,73.0,73.5,74.0,74.5,75.0,75.5,76.0,76.5,77.0,77.5,78.0,78.5,79.0,79.4,79.9,80.4,80.9,81.4,81.8,82.2,82.6,83.0,83.4,83.8,84.2,84.6,85.0,85.5,86.0,86.4,86.9,87.4,87.8,88.3,88.8,89.2,89.6,90.0,90.4,90.8,91.2,91.6,92.0,92.4,92.8,93.1,93.5,93.9,94.2,94.6,95.0,95.4,95.8,96.1,96.5,96.9,97.2,97.6,98.0,98.4,98.8,99.1,99.5,99.9,100.2,100.6,101.0,101.4,101.7,102.1,102.5,102.8,103.2,103.6,104.0,104.2,104.5,104.7,105.0,105.2,105.5,105.7,106.0,106.4,106.8,107.1,107.5,107.9,108.2,108.6,109.0,109.2,109.5,109.8,110.0,110.2,110.5,110.8,111.0,111.4,111.7,112.1,112.4,112.8,113.1,113.5,113.9,114.1,114.4,114.6,114.9,115.2,115.4,115.7,115.9,116.2,116.4,116.7,116.9,117.2,117.4,117.7,117.9,118.2,118.4,118.7,118.9,119.1,119.4,119.6,119.9,120.0,120.1,120.3,120.4,120.6,120.7,120.9,121.0,121.2,121.5,121.8,122.0,122.2,122.5,122.8,123.0,123.1,123.2,123.4,123.5,123.6,123.8,123.9,124.0,124.2,124.5,124.7,125.0,125.2,125.5,125.7,125.9,126.1,126.2,126.3,126.5,126.6,126.7,126.9,127.0,127.1,127.3,127.4,127.6,127.7,127.9,128.0];
+ var M={on:false,err:'',ver:0,st:{n:0,take:0,load:0,up:0},kick:function(){},snap:function(){},caps:function(){}},
+  cv,g,P={},T={},F={},snap={ok:false,ver:0,y0:0,w:0,h:0},busy=false,again=0,st=0,raf=0,until=0,lastKey='',dpr=0,capC=null,capX=null,capKey='',capVer=0,
+  touching=0,lastScroll=-1e4;
+ var MG=16,UW=BW+2*MG,UH=BH+2*MG,CU=2,TW=Math.round(UW/CU),TH=Math.round(UH/CU),GAM=.932,SHARP=0;/* «Tinted» glass has no see-through sharp copy (in «Clear» it is 5.3%) */
+ /* iOS «Liquid Glass: Tinted» (the user's phone): brightness curve g(L) of the glass, L = 0..255 */
+ var LUT=[32.0,32.5,33.0,33.5,34.0,34.5,35.0,35.5,36.0,36.5,37.0,37.5,38.0,38.5,39.0,39.5,40.0,40.4,40.8,41.1,41.5,41.9,42.2,42.6,43.0,43.5,44.0,44.5,45.0,45.5,46.0,46.5,47.0,47.5,48.0,48.5,49.0,49.5,50.0,50.5,51.0,51.4,51.7,52.1,52.5,52.9,53.2,53.6,54.0,54.4,54.8,55.1,55.5,55.9,56.2,56.6,57.0,57.5,58.0,58.5,59.0,59.5,60.0,60.5,60.9,61.3,61.7,62.1,62.5,62.9,63.2,63.6,64.0,64.4,64.8,65.1,65.5,65.9,66.2,66.6,67.0,67.4,67.8,68.1,68.5,68.9,69.2,69.6,70.0,70.4,70.7,71.1,71.5,71.8,72.2,72.6,72.9,73.2,73.5,73.7,74.0,74.2,74.5,74.7,75.0,75.4,75.8,76.1,76.5,76.9,77.2,77.6,78.0,78.4,78.7,79.1,79.4,79.8,80.1,80.5,80.9,81.1,81.4,81.7,81.9,82.2,82.5,82.7,83.0,83.2,83.5,83.8,84.0,84.2,84.5,84.8,85.0,85.4,85.7,86.1,86.4,86.8,87.2,87.5,87.9,88.1,88.4,88.7,88.9,89.2,89.4,89.7,90.0,90.2,90.5,90.7,91.0,91.2,91.5,91.7,92.0,92.2,92.5,92.7,93.0,93.2,93.5,93.7,94.0,94.2,94.4,94.7,94.9,95.2,95.4,95.6,95.9,96.0,96.1,96.3,96.4,96.6,96.7,96.9,97.0,97.2,97.5,97.8,98.0,98.2,98.5,98.8,99.0,99.2,99.4,99.7,99.9,100.1,100.3,100.6,100.8,100.9,101.1,101.2,101.4,101.5,101.7,101.8,102.0,102.1,102.2,102.4,102.5,102.6,102.8,102.9,103.0,103.2,103.5,103.7,103.9,104.1,104.4,104.6,104.8,105.0,105.1,105.2,105.4,105.5,105.6,105.8,105.9,106.0,106.2,106.3,106.4,106.5,106.7,106.8,106.9,107.1,107.2,107.3,107.4,107.5,107.7,107.8,107.9,107.9,107.9,107.9,108.0,108.0,108.0,108.0];
  var KW=[0.053062,0.052525,0.050948,0.048434,0.045138,0.041256,0.037001,0.032589,0.028214,0.024041,0.020192,0.016750,0.013753,0.011209,0.009093,0.007366,0.005977,0.004871,0.003995,0.003301,0.002749,0.002306,0.001945,0.001647,0.001398,0.001186,0.001006,0.000851,0.000717,0.000601,0.000502,0.000417,0.000344,0.000283,0.000231,0.000187,0.000151,0.000121,0.000097,0.000077];
+ /* rim gains (iOS, per pixel): rows = distance to the edge 0..20 px at 3x, columns = edge angle 0..90 deg step 7.5;
+    Kl = .6 + b/255*.5 (brightness), Kc = .8 + b/255*.8 (colour) */
+ var KL=[202,203,200,190,187,181,179,173,168,158,141,136,127,202,203,201,193,191,187,183,180,175,169,158,152,148,202,203,201,196,195,193,188,186,183,179,175,167,169,201,203,202,200,203,202,198,201,200,197,193,191,190,200,203,202,202,203,203,204,203,201,198,198,193,192,200,203,202,202,203,203,203,202,201,202,199,195,196,200,202,202,202,204,204,202,202,201,201,200,198,196,200,202,202,202,204,205,202,202,203,202,201,198,198,200,202,203,202,204,205,202,202,203,203,201,199,202,200,202,203,202,204,205,202,202,201,204,201,199,195,200,202,203,202,204,203,203,203,203,202,201,199,200,200,202,202,202,203,203,203,205,204,202,203,199,197,200,202,202,203,203,203,205,205,205,203,201,200,201,200,202,202,202,203,203,205,204,205,204,202,200,201,200,203,202,201,203,203,205,204,205,205,204,199,199,201,203,202,201,202,204,205,203,204,205,205,203,204,202,203,202,201,202,205,205,203,203,205,204,203,203,202,203,202,201,202,205,205,205,203,204,204,202,202,202,204,202,201,203,205,205,205,203,202,202,202,202,202,205,202,201,204,204,205,205,205,204,202,200,201,204,204,204,204,204,204,204,204,204,204,204,204,204];
+ var KC=[62,63,68,75,82,90,99,104,113,122,141,152,155,62,63,66,72,78,84,92,96,103,109,122,130,132,62,62,65,68,73,78,85,88,92,97,103,108,109,62,62,62,64,64,65,71,68,70,73,80,82,83,62,62,62,63,63,63,65,67,69,71,75,79,80,62,62,62,63,63,63,65,66,68,70,74,75,77,62,62,62,62,64,63,65,66,68,70,72,74,75,62,62,62,62,64,63,65,66,67,69,71,73,73,62,62,62,62,64,63,65,65,67,69,71,71,72,62,62,62,62,64,63,65,65,67,68,69,71,71,62,62,62,62,63,63,65,65,67,67,69,70,70,62,62,62,62,63,63,65,65,66,67,68,69,70,62,62,62,62,63,63,65,65,66,67,67,68,69,62,62,62,63,63,63,64,65,66,66,67,68,68,62,62,62,63,63,63,64,65,66,66,67,67,67,62,62,62,63,63,63,64,65,65,66,67,67,67,62,62,63,63,63,63,63,65,65,66,66,67,66,62,62,63,63,63,63,63,64,66,66,66,66,66,62,62,63,63,63,63,63,64,65,66,66,66,66,62,63,63,63,64,63,63,64,65,66,66,65,65,64,64,64,64,64,64,64,64,64,64,64,64,64];
+ /* bending: sampling shift along the inward normal, px at 3x by distance to the edge (+ = inward), D = b/255*64-32 */
+ var DT=[25,85,133,153,151,150,149,148,147,146,145,145,143,142,142,141,140,140,139,138,137,137,136,135,134,134,134,133,132,132,132,131,131,131,130,130,131,130,130,130,130,129,129,129,128,128,128,127,128,128,128,128,128,129,129,128,128,128,128,128,128,128,128,128];
+ var FL=function(s){return '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+s},N=function(x){return x.toFixed(1)};
  var VS='attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
- var HD='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 v;uniform sampler2D S;uniform vec4 R,Q;uniform float G;'+
+ var HD='varying vec2 v;uniform sampler2D S;uniform vec4 R,Q;uniform float G;'+
   'vec3 sn(vec2 s){vec2 u=(s+Q.xy)/Q.zw;if(u.x<0.||u.y<0.||u.x>1.||u.y>1.)return vec3(0.);return texture2D(S,u).rgb;}';
- /* capture: one texel = 2x2 bar units, region = bar + 16 units around; stored as colour^0.932 */
- var FC=HD+'void main(){vec2 k=R.zw/vec2('+BW+'.,'+BH.toFixed(1)+'),u=vec2(v.x*'+UW+'.,v.y*'+UH.toFixed(1)+')-'+MG+'.,s=R.xy+u*k;'+
-  'vec3 c=.25*(sn(s+vec2(-.5,-.5)*k)+sn(s+vec2(.5,-.5)*k)+sn(s+vec2(-.5,.5)*k)+sn(s+vec2(.5,.5)*k));gl_FragColor=vec4(pow(c,vec3(G)),1.);}';
- var FB='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 v;uniform sampler2D T;uniform vec2 D;uniform float W['+KW.length+'];'+
-  'void main(){vec4 c=W[0]*texture2D(T,v);for(int i=1;i<'+KW.length+';i++){float f=float(i);c+=W[i]*(texture2D(T,v+D*f)+texture2D(T,v-D*f));}gl_FragColor=c;}';
- var FO=HD+'uniform sampler2D B,MK,L;uniform float A;'+
+ var FC=FL(HD+'void main(){vec2 k=R.zw/vec2('+N(BW)+','+N(BH)+'),u=vec2(v.x*'+N(UW)+',v.y*'+N(UH)+')-'+N(MG)+',s=R.xy+u*k;'+
+  'vec3 c=.25*(sn(s+vec2(-.5,-.5)*k)+sn(s+vec2(.5,-.5)*k)+sn(s+vec2(-.5,.5)*k)+sn(s+vec2(.5,.5)*k));gl_FragColor=vec4(pow(c,vec3(G)),1.);}');
+ var FB=FL('varying vec2 v;uniform sampler2D T;uniform vec2 D;uniform float W['+KW.length+'];'+
+  'void main(){vec4 c=W[0]*texture2D(T,v);for(int i=1;i<'+KW.length+';i++){float f=float(i);c+=W[i]*(texture2D(T,v+D*f)+texture2D(T,v-D*f));}gl_FragColor=c;}');
+ var FO=FL(HD+'uniform sampler2D B,MK,L,GE,KT,DX,ST,CP;uniform float A;const vec3 W7=vec3(.2126,.7152,.0722);'+
   'float blob(vec2 u){if(u.x<14.67||u.x>345.33||u.y<22.33||u.y>56.67)return 0.;float ry=u.y<39.5?15.:15.33;vec2 c=vec2(clamp(u.x,37.,323.),clamp(u.y,37.33,41.34));vec2 d=(u-c)/vec2(22.33,ry);return dot(d,d)<=1.?1.:0.;}'+
-  'void main(){float m=texture2D(MK,vec2(v.x,1.-v.y)).a;if(m<=0.){gl_FragColor=vec4(0.);return;}'+
-  'vec2 u=vec2(v.x*'+BW+'.,(1.-v.y)*'+BH.toFixed(1)+'),k=R.zw/vec2('+BW+'.,'+BH.toFixed(1)+');'+
-  'vec3 b=texture2D(B,(u+'+MG+'.)/vec2('+UW+'.,'+UH.toFixed(1)+')).rgb;vec3 z=(1.-A)*b+A*pow(sn(R.xy+u*k),vec3(G));'+
-  'vec3 c=pow(max(z,vec3(0.)),vec3(1./G))*255.;float l=dot(c,vec3(.2126,.7152,.0722));'+
-  'float gv=texture2D(L,vec2((l+.5)/256.,.5)).a*255.;vec3 o=gv+clamp(.85-.00092*l,.5,.9)*(c-l);'+
-  'vec3 col=clamp(28.+blob(u)+o-29.,0.,255.)/255.;gl_FragColor=vec4(col*m,m);}';
+  'void main(){vec2 tc=vec2(v.x,1.-v.y);float m=texture2D(MK,tc).a;vec4 sk=texture2D(ST,tc);float al=sk.a+(1.-sk.a)*m;if(al<=0.){gl_FragColor=vec4(0.);return;}'+
+  'vec4 ge=texture2D(GE,tc);float t3=ge.r*63.75,th=ge.g*90.;vec2 n=ge.ba*2.-1.;float d=texture2D(DX,vec2(t3/64.,.5)).a*64.-32.;'+
+  'vec2 u=vec2(v.x*'+N(BW)+',(1.-v.y)*'+N(BH)+'),us=u+n*d/3.,k=R.zw/vec2('+N(BW)+','+N(BH)+');'+
+  'vec3 b=texture2D(B,(us+'+N(MG)+')/vec2('+N(UW)+','+N(UH)+')).rgb;vec3 z=(1.-A)*b+A*pow(sn(R.xy+us*k),vec3(G));'+
+  'vec3 c=pow(max(z,vec3(0.)),vec3(1./G))*255.;float l=dot(c,W7);float gv=texture2D(L,vec2((l+.5)/256.,.5)).a*255.;vec3 gc=gv+clamp(.6543-.000833*l,.4,.7)*(c-l);'+
+  'float dl=gv-29.;vec3 dc=gc-gv;vec2 kk=texture2D(KT,vec2((th/7.5+.5)/13.,t3/21.)).rg;float kl=.6+kk.r*.5,kc=.8+kk.g*.8;'+
+  'vec3 bar=sk.rgb*255.+(1.-sk.a)*m*(28.+blob(u))+m*(kl*dl+kc*dc);float q=texture2D(CP,tc).a;vec3 cap=m*(7.36+.87*dl+1.2*dc);'+
+  'vec3 col=clamp(mix(bar,cap,q),0.,255.*al);gl_FragColor=vec4(col/255.,al);}');
  function sh(t,s){var o=g.createShader(t);g.shaderSource(o,s);g.compileShader(o);if(!g.getShaderParameter(o,g.COMPILE_STATUS))throw g.getShaderInfoLog(o);return o}
  function prog(fs){var p=g.createProgram();g.attachShader(p,sh(g.VERTEX_SHADER,VS));g.attachShader(p,sh(g.FRAGMENT_SHADER,fs));g.bindAttribLocation(p,0,'p');g.linkProgram(p);if(!g.getProgramParameter(p,g.LINK_STATUS))throw g.getProgramInfoLog(p);p.u={};return p}
  function U(p,n){return p.u[n]||(p.u[n]=g.getUniformLocation(p,n))}
  function tx(w,h,lin){var t=g.createTexture();g.bindTexture(g.TEXTURE_2D,t);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,lin?g.LINEAR:g.NEAREST);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,lin?g.LINEAR:g.NEAREST);
   g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);if(w)g.texImage2D(g.TEXTURE_2D,0,g.RGBA,w,h,0,g.RGBA,g.UNSIGNED_BYTE,null);return t}
  function fb(t){var f=g.createFramebuffer();g.bindFramebuffer(g.FRAMEBUFFER,f);g.framebufferTexture2D(g.FRAMEBUFFER,g.COLOR_ATTACHMENT0,g.TEXTURE_2D,t,0);if(g.checkFramebufferStatus(g.FRAMEBUFFER)!==g.FRAMEBUFFER_COMPLETE)throw 'fbo';return f}
- function mask(){var w=cv.width,h=cv.height,c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.setTransform(w/BW,0,0,h/BH,0,0);x.fillStyle='#fff';x.fill(new Path2D(bpath(BW,BH,0,0)));
-  g.bindTexture(g.TEXTURE_2D,T.mk);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,c)}
- function size(){var d=Math.min(3,Math.max(1,DPR||2)),w=Math.round(BW*d),h=Math.round(BH*d);if(cv.width!==w||cv.height!==h||d!==dpr){cv.width=w;cv.height=h;dpr=d;mask();lastKey=''}}
+ function upl(t,src,pm){g.bindTexture(g.TEXTURE_2D,t);g.pixelStorei(g.UNPACK_PREMULTIPLY_ALPHA_WEBGL,!!pm);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,src);g.pixelStorei(g.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false)}
+ function cnv(w,h){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.setTransform(w/BW,0,0,h/BH,0,0);return [c,x]}
+ /* squared distance transform (Felzenszwalb), 1D */
+ function edt1(f,n,o,v,z){var k=0,q,s;v[0]=0;z[0]=-1e20;z[1]=1e20;
+  for(q=1;q<n;q++){s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]);while(s<=z[k]){k--;s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k])}k++;v[k]=q;z[k]=s;z[k+1]=1e20}
+  for(k=0,q=0;q<n;q++){while(z[k+1]<q)k++;o[q]=(q-v[k])*(q-v[k])+f[v[k]]}}
+ function boxb(a,w,h,r){var b=new Float32Array(w*h),x,y,i,s;for(y=0;y<h;y++){for(x=0;x<w;x++){s=0;for(i=-r;i<=r;i++)s+=a[y*w+Math.min(w-1,Math.max(0,x+i))];b[y*w+x]=s/(2*r+1)}}
+  for(x=0;x<w;x++){for(y=0;y<h;y++){s=0;for(i=-r;i<=r;i++)s+=b[Math.min(h-1,Math.max(0,y+i))*w+x];a[y*w+x]=s/(2*r+1)}}}
+ /* bar outline: coverage mask, v93 strokes (premultiplied), geometry (distance to the edge in px at 3x, edge angle, inward normal) */
+ function shape(){var w=cv.width,h=cv.height,d=w/BW,c,x,i,j;
+  c=cnv(w,h);x=c[1];x.fillStyle='#fff';x.fill(new Path2D(bpath(BW,BH,0,0)));upl(T.mk,c[0],0);
+  var cov=x.getImageData(0,0,w,h).data;
+  c=cnv(w,h);x=c[1];x.lineWidth=1/3;
+  for(i=ROWS.length-1;i>=0;i--){var dd=(i+.5)/3,Wr=BW-2*dd,Hr=BH-2*dd,q=ROWS[i],gr=x.createLinearGradient(0,dd,0,dd+Hr),col='rgba('+q[0]+','+q[0]+','+q[0]+',';
+   for(j=0;j<ANG.length;j++){var o=thY(Wr,Hr,ANG[j])/Hr;gr.addColorStop(Math.min(1,Math.max(0,o)),col+q[1][j]+')');gr.addColorStop(Math.min(1,Math.max(0,1-o)),col+q[1][j]+')')}
+   x.strokeStyle=gr;x.stroke(new Path2D(bpath(Wr,Hr,dd,dd)))}
+  upl(T.st,c[0],1);
+  var P2=2,W2=w+2*P2,H2=h+2*P2,f=new Float64Array(W2*H2),o=new Float64Array(Math.max(W2,H2)),fi=new Float64Array(Math.max(W2,H2)),v=new Int32Array(Math.max(W2,H2)),z=new Float64Array(Math.max(W2,H2)+1),xx,yy;
+  for(yy=0;yy<h;yy++)for(xx=0;xx<w;xx++)if(cov[(yy*w+xx)*4+3]>=128)f[(yy+P2)*W2+xx+P2]=1e20;
+  for(xx=0;xx<W2;xx++){for(yy=0;yy<H2;yy++)fi[yy]=f[yy*W2+xx];edt1(fi,H2,o,v,z);for(yy=0;yy<H2;yy++)f[yy*W2+xx]=o[yy]}
+  for(yy=0;yy<H2;yy++){for(xx=0;xx<W2;xx++)fi[xx]=f[yy*W2+xx];edt1(fi,W2,o,v,z);for(xx=0;xx<W2;xx++)f[yy*W2+xx]=o[xx]}
+  var dist=new Float32Array(w*h),sm,out=new Uint8Array(w*h*4),k=3/d;
+  for(yy=0;yy<h;yy++)for(xx=0;xx<w;xx++)dist[yy*w+xx]=Math.sqrt(f[(yy+P2)*W2+xx+P2]);
+  sm=new Float32Array(dist);boxb(sm,w,h,Math.max(1,Math.round(d)));boxb(sm,w,h,Math.max(1,Math.round(d)));
+  for(yy=0;yy<h;yy++)for(xx=0;xx<w;xx++){i=yy*w+xx;var a=cov[i*4+3]/255,t=dist[i]>0?dist[i]-.5-(1-a):0;if(t<0)t=0;
+   var gx=sm[yy*w+Math.min(w-1,xx+1)]-sm[yy*w+Math.max(0,xx-1)],gy=sm[Math.min(h-1,yy+1)*w+xx]-sm[Math.max(0,yy-1)*w+xx],gl=Math.sqrt(gx*gx+gy*gy)||1;gx/=gl;gy/=gl;
+   out[i*4]=Math.min(255,Math.round(t*k*4));out[i*4+1]=Math.round(Math.atan2(Math.abs(gy),Math.abs(gx))/(Math.PI/2)*255);out[i*4+2]=Math.round((gx*.5+.5)*255);out[i*4+3]=Math.round((gy*.5+.5)*255)}
+  g.bindTexture(g.TEXTURE_2D,T.ge);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,w,h,0,g.RGBA,g.UNSIGNED_BYTE,out);
+  capC=cnv(w,h);capKey='';lastKey=''}
+ function size(){var d=Math.min(3,Math.max(1,DPR||2)),w=Math.round(BW*d),h=Math.round(BH*d);if(cv.width!==w||cv.height!==h||d!==dpr){cv.width=w;cv.height=h;dpr=d;shape();try{paint()}catch(_){}}}
+ /* selected-tab capsule (it moves): its coverage is drawn here, the shader darkens the glass under it like iOS (0.867 brightness, 1.2 colour) */
+ M.caps=function(cx,hw,hh,a){if(!M.on||!capC)return;var k=[cx,hw,hh,a].map(function(n){return n.toFixed(3)}).join();if(k===capKey)return;capKey=k;
+  var x=capC[1];x.clearRect(0,0,BW,BH);if(a>.002){x.globalAlpha=a;x.fillStyle='#fff';x.fill(new Path2D(path(2*hw,2*hh,cx-hw,BH/2-hh)));x.globalAlpha=1}upl(T.cp,capC[0],0);capVer++;kick(60)};
  function init(){
-  if(BASIC||/[?&]itbglass=0/.test(location.search)||!window.Path2D||!window.CSS||!CSS.supports||!(CSS.supports('mix-blend-mode','plus-lighter')))return false;
+  if(BASIC||/[?&]itbglass=0/.test(location.search)||!window.Path2D||!window.Float32Array)return false;
   cv=document.createElement('canvas');cv.className='gl';cv.setAttribute('aria-hidden','true');cv.style.cssText='left:0;top:0;width:100%;height:100%';
   g=cv.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false})||cv.getContext('experimental-webgl');
   if(!g)return false;
   P.c=prog(FC);P.b=prog(FB);P.o=prog(FO);
   var vb=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,vb);g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),g.STATIC_DRAW);g.enableVertexAttribArray(0);g.vertexAttribPointer(0,2,g.FLOAT,false,0,0);
   T.s=tx(1,1,1);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,1,1,0,g.RGBA,g.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
-  T.c=tx(TW,TH,1);T.t=tx(TW,TH,1);T.b=tx(TW,TH,1);F.c=fb(T.c);F.t=fb(T.t);F.b=fb(T.b);T.mk=tx(0,0,1);
-  T.l=tx(0,0,1);var a=new Uint8Array(256);for(var i=0;i<256;i++)a[i]=Math.round(LUT[i]);g.texImage2D(g.TEXTURE_2D,0,g.ALPHA,256,1,0,g.ALPHA,g.UNSIGNED_BYTE,a);
+  T.c=tx(TW,TH,1);T.t=tx(TW,TH,1);T.b=tx(TW,TH,1);F.c=fb(T.c);F.t=fb(T.t);F.b=fb(T.b);
+  T.mk=tx(0,0,1);T.st=tx(0,0,1);T.ge=tx(0,0,0);T.cp=tx(0,0,1);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,1,1,0,g.RGBA,g.UNSIGNED_BYTE,new Uint8Array(4));
+  var i,a=new Uint8Array(256);T.l=tx(0,0,1);for(i=0;i<256;i++)a[i]=Math.round(LUT[i]);g.texImage2D(g.TEXTURE_2D,0,g.ALPHA,256,1,0,g.ALPHA,g.UNSIGNED_BYTE,a);
+  var kt=new Uint8Array(13*21*4);for(i=0;i<13*21;i++){kt[i*4]=KL[i];kt[i*4+1]=KC[i];kt[i*4+3]=255}T.kt=tx(0,0,1);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,13,21,0,g.RGBA,g.UNSIGNED_BYTE,kt);
+  T.dx=tx(0,0,1);g.texImage2D(g.TEXTURE_2D,0,g.ALPHA,64,1,0,g.ALPHA,g.UNSIGNED_BYTE,new Uint8Array(DT));
   g.bindFramebuffer(g.FRAMEBUFFER,null);g.disable(g.BLEND);
   cv.addEventListener('webglcontextlost',function(e){e.preventDefault();off()});
   $('glass').appendChild(cv);size();return true}
- /* Safari hands the scroll position to scripts about 2 frames after the page has moved: predict it from the speed */
+ /* Safari hands the scroll position to scripts ~2 frames after the page has moved: extrapolate it with the speed */
  var sv={y:0,t:0,v:0},LAT=window.ITB_LAT!=null?window.ITB_LAT:.032;
- function scrollY(now){var y=window.pageYOffset||0;if(y!==sv.y){var dt=(now-sv.t)/1000;if(sv.t&&dt>0&&dt<.1){var v=(y-sv.y)/dt;sv.v=sv.v?sv.v*.5+v*.5:v}else sv.v=0;sv.y=y;sv.t=now}else if(now-sv.t>50)sv.v=0;
-  var m=document.documentElement.scrollHeight-window.innerHeight;return y<0||y>m?y:Math.max(0,Math.min(m,y+sv.v*LAT))}
- function draw(r,now){var sx=window.pageXOffset||0,sy=scrollY(now),q=[sx-snap.x0,sy-snap.y0,snap.w||1,snap.h||1];
+ function scrollY(now){var y=window.pageYOffset||0;if(y!==sv.y){var dt=(now-sv.t)/1000;if(sv.t&&dt>0&&dt<.1){var vv=(y-sv.y)/dt;sv.v=sv.v?sv.v*.6+vv*.4:vv}else sv.v=0;sv.y=y;sv.t=now}
+  var e=(now-sv.t)/1000;if(e>.06)sv.v=0;var m=document.documentElement.scrollHeight-window.innerHeight;return y<0||y>m?y:Math.max(0,Math.min(m,y+sv.v*(LAT+Math.min(e,.05))))}
+ function draw(r,now){var q=[(window.pageXOffset||0),scrollY(now)-snap.y0,snap.w||1,snap.h||1],o=P.o;
   g.useProgram(P.c);g.bindFramebuffer(g.FRAMEBUFFER,F.c);g.viewport(0,0,TW,TH);g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,T.s);g.uniform1i(U(P.c,'S'),0);
   g.uniform4f(U(P.c,'R'),r.left,r.top,r.width,r.height);g.uniform4f(U(P.c,'Q'),q[0],q[1],q[2],q[3]);g.uniform1f(U(P.c,'G'),GAM);g.drawArrays(g.TRIANGLE_STRIP,0,4);
   g.useProgram(P.b);g.uniform1fv(U(P.b,'W'),KW);g.uniform1i(U(P.b,'T'),0);
   g.bindFramebuffer(g.FRAMEBUFFER,F.t);g.bindTexture(g.TEXTURE_2D,T.c);g.uniform2f(U(P.b,'D'),1/TW,0);g.drawArrays(g.TRIANGLE_STRIP,0,4);
   g.bindFramebuffer(g.FRAMEBUFFER,F.b);g.bindTexture(g.TEXTURE_2D,T.t);g.uniform2f(U(P.b,'D'),0,1/TH);g.drawArrays(g.TRIANGLE_STRIP,0,4);
-  g.useProgram(P.o);g.bindFramebuffer(g.FRAMEBUFFER,null);g.viewport(0,0,cv.width,cv.height);
-  g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,T.s);g.uniform1i(U(P.o,'S'),0);
-  g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,T.b);g.uniform1i(U(P.o,'B'),1);
-  g.activeTexture(g.TEXTURE2);g.bindTexture(g.TEXTURE_2D,T.mk);g.uniform1i(U(P.o,'MK'),2);
-  g.activeTexture(g.TEXTURE3);g.bindTexture(g.TEXTURE_2D,T.l);g.uniform1i(U(P.o,'L'),3);g.activeTexture(g.TEXTURE0);
-  g.uniform4f(U(P.o,'R'),r.left,r.top,r.width,r.height);g.uniform4f(U(P.o,'Q'),q[0],q[1],q[2],q[3]);g.uniform1f(U(P.o,'G'),GAM);g.uniform1f(U(P.o,'A'),SHARP);
+  g.useProgram(o);g.bindFramebuffer(g.FRAMEBUFFER,null);g.viewport(0,0,cv.width,cv.height);
+  var L=[['S',T.s],['B',T.b],['MK',T.mk],['L',T.l],['GE',T.ge],['KT',T.kt],['DX',T.dx],['ST',T.st],['CP',T.cp]];
+  for(var i=0;i<L.length;i++){g.activeTexture(g.TEXTURE0+i);g.bindTexture(g.TEXTURE_2D,L[i][1]);g.uniform1i(U(o,L[i][0]),i)}g.activeTexture(g.TEXTURE0);
+  g.uniform4f(U(o,'R'),r.left,r.top,r.width,r.height);g.uniform4f(U(o,'Q'),q[0],q[1],q[2],q[3]);g.uniform1f(U(o,'G'),GAM);g.uniform1f(U(o,'A'),SHARP);
   g.drawArrays(g.TRIANGLE_STRIP,0,4)}
- function frame(now){raf=0;if(!M.on)return;try{var r=barEl.getBoundingClientRect(),k=[r.left,r.top,r.width,r.height,window.pageXOffset,window.pageYOffset,snap.ver,dpr,sv.v?now:0].join();
-  if(k!==lastKey){lastKey=k;draw(r,now)}}catch(_){off();return}
+ function frame(now){raf=0;if(!M.on)return;try{var r=barEl.getBoundingClientRect(),k=[r.left,r.top,r.width,r.height,window.pageXOffset,window.pageYOffset,snap.ver,dpr,capVer,sv.v?now:0].join();
+  if(k!==lastKey){lastKey=k;draw(r,now)}}catch(e){M.err='draw '+e;off();return}
   if(performance.now()<until)raf=requestAnimationFrame(frame)}
  function kick(ms){if(!M.on)return;until=Math.max(until,performance.now()+(ms||300));if(!raf)raf=requestAnimationFrame(frame)}
- /* page picture: the visible screen of #app with the page's own CSS, animations stopped at their end state */
+ /* page picture: the visible screen of #app with the page's own CSS, animations stopped at their end state.
+    Taken only while the page stands still (it costs a moment on a phone); card shapes (SVG backgrounds) are left
+    to their CSS colour + radius, so the picture is complete at once (no second pass, no flicker). */
  function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
- function take(){st=0;if(!M.on)return;if(busy){again=1;return}var app=document.getElementById('app');if(!app)return;busy=true;
-  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),H=Math.max(1,Math.ceil(ar.height)),y0=ar.top+(window.pageYOffset||0),x0=window.pageXOffset||0,
+ function take(){st=0;if(!M.on)return;if(busy){again=1;return}if(touching||performance.now()-lastScroll<400){st=setTimeout(take,250);return}
+  var app=document.getElementById('app');if(!app)return;busy=true;var t0=performance.now();
+  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),H=Math.max(1,Math.ceil(ar.height)),y0=ar.top+(window.pageYOffset||0),
    li=app.querySelectorAll('input,textarea,select'),cl=app.cloneNode(true),ci=cl.querySelectorAll('input,textarea,select'),i,css='',xs=new XMLSerializer();
    for(i=0;i<li.length&&i<ci.length;i++){if(li[i].type==='checkbox'||li[i].type==='radio'){if(li[i].checked)ci[i].setAttribute('checked','');else ci[i].removeAttribute('checked')}else ci[i].setAttribute('value',li[i].value)}
    var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++)if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].parentNode.removeChild(sc[i]);
+   var bi=cl.querySelectorAll('[style*="url("]');for(i=0;i<bi.length;i++){var es=bi[i].style;es.backgroundImage='';es.backgroundSize='';es.backgroundRepeat='';if(es.backgroundColor==='transparent')es.backgroundColor=''}
    var ss=document.querySelectorAll('style');for(i=0;i<ss.length;i++)if(ss[i].id!=='itb-css')css+=ss[i].textContent;
    /* sharper picture through a CSS scale inside: Safari does not scale foreignObject content by the SVG viewBox */
-   var sp=document.querySelector('body>svg'),s=Math.max(.2,Math.min(2,window.devicePixelRatio||1,(M.max||4096)/W,(M.max||4096)/H,Math.sqrt(9e6/(W*H)))),PW=Math.floor(W*s),PH=Math.min(M.max||4096,Math.floor(H*s));s=PW/W;
+   var sp=document.querySelector('body>svg'),s=Math.max(.2,Math.min(1.5,window.devicePixelRatio||1,(M.max||4096)/W,(M.max||4096)/H,Math.sqrt(6e6/(W*H)))),PW=Math.floor(W*s),PH=Math.min(M.max||4096,Math.floor(H*s));s=PW/W;
    css+='*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}html,body{margin:0;width:'+PW+'px;height:'+PH+'px;overflow:hidden;background:#000}body::before{display:none}';
    var str='<svg xmlns="http://www.w3.org/2000/svg" width="'+PW+'" height="'+PH+'"><foreignObject x="0" y="0" width="'+PW+'" height="'+PH+'">'+
     '<html xmlns="http://www.w3.org/1999/xhtml"><head><style>'+esc(css)+'</style></head><body class="'+esc(document.body.className)+'"><div style="position:relative;width:'+W+'px;height:'+H+'px;transform:scale('+s+');transform-origin:0 0">'+(sp?xs.serializeToString(sp):'')+xs.serializeToString(cl)+'</div></body></html></foreignObject></svg>';
-   var im=new Image();
-   /* pictures inside the page picture (card shapes are SVG backgrounds) are decoded after it loads: upload it again a moment later */
-   var up=function(){try{if(M.on&&tok===M.tok){g.bindTexture(g.TEXTURE_2D,T.s);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,im);snap={ok:true,ver:snap.ver+1,x0:0,y0:y0,w:W,h:H};M.ver=snap.ver;kick(60)}}catch(e){M.err='tex '+e}},tok=M.tok=(M.tok||0)+1;
-   im.onload=function(){M.img=im;up();setTimeout(up,250);setTimeout(function(){up();done();if(/[?&]glsdump/.test(location.search))dump(im,y0,W,H)},700)};
+   var hasImg=!!cl.querySelector('img'),tok=M.tok=(M.tok||0)+1,im=new Image();M.st.take=Math.round(performance.now()-t0);t0=performance.now();
+   im.onload=function(){M.st.load=Math.round(performance.now()-t0);M.img=im;requestAnimationFrame(function(){var t1=performance.now();
+     try{if(M.on){upl(T.s,im,0);snap={ok:true,ver:snap.ver+1,y0:y0,w:W,h:H};M.ver=snap.ver;M.st.n++;kick(60)}}catch(e){M.err='tex '+e}
+     M.st.up=Math.round(performance.now()-t1);
+     /* <img> inside the picture decode a moment later (none on the bank page): upload once more */
+     if(hasImg)setTimeout(function(){try{if(M.on&&tok===M.tok){upl(T.s,im,0);snap.ver++;M.ver=snap.ver;kick(60)}}catch(_){}done()},350);else done();
+     if(/[?&]glsdump/.test(location.search)){dump(im,y0,W,H);stat()}})};
    im.onerror=function(){M.err='img';done()};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(str)}catch(e){M.err='snap '+e;done()}}
  /* checking aid (only with ?glsdump on the local test server): send the page picture to compare it with the screen */
  function dump(im,y0,W,H){try{var c=document.createElement('canvas');c.width=im.width;c.height=im.height;c.getContext('2d').drawImage(im,0,0);var x=new XMLHttpRequest();x.open('POST','/glsdump?y0='+y0+'&w='+W+'&h='+H+'&sy='+(window.pageYOffset||0));x.send(c.toDataURL('image/png'))}catch(_){}}
- function done(){busy=false;if(again){again=0;sched(120)}}
- function sched(ms){if(!M.on)return;if(st)clearTimeout(st);st=setTimeout(take,ms==null?150:ms)}
- function on(){paintBar(1);var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';cv.style.display='';M.on=true;lastKey='';kick(100)}
- function off(){M.on=false;try{paintBar(0);glassClip();if(cv)cv.style.display='none'}catch(_){}}
+ function stat(){try{var x=new XMLHttpRequest();x.open('POST','/glsstat');x.send(JSON.stringify({n:M.st.n,take:M.st.take,load:M.st.load,up:M.st.up,ver:M.ver,err:M.err,why:M.why,t:Math.round(performance.now())}))}catch(_){}}
+ function done(){busy=false;if(again){again=0;sched(150)}}
+ function sched(ms){if(!M.on)return;if(st)clearTimeout(st);st=setTimeout(take,ms==null?200:ms)}
+ function strip(s){return (s||'').replace(/(^|\s)down(?=\s|$)/g,' ').replace(/\s+/g,' ').trim()}
+ function on(){var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';$('edge').style.display='none';cv.style.display='';M.on=true;lastKey='';try{paint()}catch(_){}kick(100)}
+ function off(){M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(cv)cv.style.display='none';paint()}catch(_){}}
  M.kick=kick;M.snap=sched;M.off=off;M.size=function(){if(M.on){size();kick(100)}};
  M.start=function(){try{if(!init())return;M.max=g.getParameter(g.MAX_TEXTURE_SIZE);on();
-   var app=document.getElementById('app');
-   if(app&&window.MutationObserver){new MutationObserver(function(){sched()}).observe(app,{subtree:true,childList:true,attributes:true,characterData:true});new MutationObserver(function(){sched()}).observe(document.body,{attributes:true})}
-   window.addEventListener('scroll',function(){kick(500)},{passive:true});window.addEventListener('resize',function(){sched(200);kick(300)});sched(0)}catch(e){M.err='start '+e;off()}};
+   var app=document.getElementById('app'),mo=function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(r.type==='attributes'&&r.attributeName==='class'&&strip(r.oldValue)===strip(r.target.getAttribute('class')))continue;M.why=r.type+':'+(r.attributeName||'')+':'+(r.target.className||r.target.nodeName||'')+':'+String(r.oldValue).slice(0,40);sched();return}};
+   if(app&&window.MutationObserver){new MutationObserver(mo).observe(app,{subtree:true,childList:true,attributes:true,attributeOldValue:true,characterData:true});new MutationObserver(mo).observe(document.body,{attributes:true,attributeOldValue:true})}
+   var tch=function(e){touching=e.touches?e.touches.length:0};['touchstart','touchend','touchcancel'].forEach(function(t){window.addEventListener(t,tch,{passive:true,capture:true})});
+   window.addEventListener('scroll',function(){lastScroll=performance.now();kick(500)},{passive:true});window.addEventListener('resize',function(){sched(250);kick(300)});sched(0)}catch(e){M.err='start '+e;off()}};
  return M})();
 
 if(!BASIC)GLS.start();
