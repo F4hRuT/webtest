@@ -311,7 +311,7 @@ var FL=document.fonts&&document.fonts.status==='loading';if(document.fonts&&docu
 setTimeout(intro,2000);
 try{dbg()}catch(_){}
 [400,1200,2500].forEach(function(t){setTimeout(function(){if(!raf)recomp()},t)});
-window.ITB={gls:function(){return GLS},set:function(i){if(i===sel)return;setSel(i);if(BASIC)return;startTap(i);an.rel=0;go()}};
+window.ITB={gls:function(){return GLS},set:function(i){if(GLS&&GLS.screen)GLS.screen(i);if(i===sel)return;setSel(i);if(BASIC)return;startTap(i);an.rel=0;go()}};
 /* ---------- liquid glass (iOS 27 tab bar), measured on a real iOS 27 tab bar (tools/glass-app, numbers in CLAUDE.md).
    A picture of the page (#app, SVG foreignObject) is cut to the bar + 16 pt around it (iOS sees nothing farther), blurred,
    bent near the edge (sampling moved along the edge normal), then brightness curve + colour like iOS. The v93 strokes,
@@ -319,7 +319,7 @@ window.ITB={gls:function(){return GLS},set:function(i){if(i===sel)return;setSel(
    the glass with its own iOS gains (brightness Kl, colour Kc by distance to the edge and edge angle). Over black: v93. ---------- */
 GLS=(function(){
  var M={on:false,err:'',ver:0,st:{n:0,take:0,load:0,up:0},kick:function(){},snap:function(){},caps:function(){}},
-  cv,g,P={},T={},F={},snap={ok:false,ver:0,y0:0,w:0,h:0},busy=false,again=0,st=0,raf=0,until=0,lastKey='',dpr=0,capC=null,capX=null,capKey='',capVer=0,
+  cv,g,P={},T={},F={},SN={},cur=null,prv=null,fT0=0,fDur=1,curScr=0,dirty={},dirtyAt=0,busy=false,again=0,st=0,raf=0,until=0,lastKey='',dpr=0,capC=null,capX=null,capKey='',capVer=0,
   touching=0,lastScroll=-1e4;
  var MG=16,UW=BW+2*MG,UH=BH+2*MG,CU=2,TW=Math.round(UW/CU),TH=Math.round(UH/CU),GAM=.932,SHARP=0;/* «Tinted» glass has no see-through sharp copy (in «Clear» it is 5.3%) */
  /* iOS «Liquid Glass: Tinted» (the user's phone): brightness curve g(L) of the glass, L = 0..255 */
@@ -335,8 +335,10 @@ GLS=(function(){
  var VS='attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
  var HD='varying vec2 v;uniform sampler2D S;uniform vec4 R,Q;uniform float G;'+
   'vec3 sn(vec2 s){vec2 u=(s+Q.xy)/Q.zw;if(u.x<0.||u.y<0.||u.x>1.||u.y>1.)return vec3(0.);return texture2D(S,u).rgb;}';
- var FC=FL(HD+'void main(){vec2 k=R.zw/vec2('+N(BW)+','+N(BH)+'),u=vec2(v.x*'+N(UW)+',v.y*'+N(UH)+')-'+N(MG)+',s=R.xy+u*k;'+
-  'vec3 c=.25*(sn(s+vec2(-.5,-.5)*k)+sn(s+vec2(.5,-.5)*k)+sn(s+vec2(-.5,.5)*k)+sn(s+vec2(.5,.5)*k));gl_FragColor=vec4(pow(c,vec3(G)),1.);}');
+ /* capture: the previous page picture fades into the new one (FD 0..1), so a new picture never jumps in */
+ var FC=FL(HD+'uniform sampler2D S2;uniform vec4 Q2;uniform float FD;vec3 sn2(vec2 s){vec2 u=(s+Q2.xy)/Q2.zw;if(u.x<0.||u.y<0.||u.x>1.||u.y>1.)return vec3(0.);return texture2D(S2,u).rgb;}'+
+  'vec3 tp(vec2 s){return mix(sn2(s),sn(s),FD);}void main(){vec2 k=R.zw/vec2('+N(BW)+','+N(BH)+'),u=vec2(v.x*'+N(UW)+',v.y*'+N(UH)+')-'+N(MG)+',s=R.xy+u*k;'+
+  'vec3 c=.25*(tp(s+vec2(-.5,-.5)*k)+tp(s+vec2(.5,-.5)*k)+tp(s+vec2(-.5,.5)*k)+tp(s+vec2(.5,.5)*k));gl_FragColor=vec4(pow(c,vec3(G)),1.);}');
  var FB=FL('varying vec2 v;uniform sampler2D T;uniform vec2 D;uniform float W['+KW.length+'];'+
   'void main(){vec4 c=W[0]*texture2D(T,v);for(int i=1;i<'+KW.length+';i++){float f=float(i);c+=W[i]*(texture2D(T,v+D*f)+texture2D(T,v-D*f));}gl_FragColor=c;}');
  var FO=FL(HD+'uniform sampler2D B,MK,L,GE,KT,DX,ST,CP;uniform float A;const vec3 W7=vec3(.2126,.7152,.0722);'+
@@ -406,62 +408,84 @@ GLS=(function(){
   $('glass').appendChild(cv);size();return true}
  /* Safari hands the scroll position to scripts ~2 frames after the page has moved: extrapolate it with the speed */
  var sv={y:0,t:0,v:0},LAT=window.ITB_LAT!=null?window.ITB_LAT:.032;
- function scrollY(now){var y=window.pageYOffset||0;if(y!==sv.y){var dt=(now-sv.t)/1000;if(sv.t&&dt>0&&dt<.1){var vv=(y-sv.y)/dt;sv.v=sv.v?sv.v*.6+vv*.4:vv}else sv.v=0;sv.y=y;sv.t=now}
+ function scrollY(now){var y=window.pageYOffset||0;if(y!==sv.y){var dt=(now-sv.t)/1000;if(sv.t&&dt>0&&dt<.1&&Math.abs(y-sv.y)<400){var vv=(y-sv.y)/dt;sv.v=sv.v?sv.v*.6+vv*.4:vv}else sv.v=0;sv.y=y;sv.t=now}
   var e=(now-sv.t)/1000;if(e>.06)sv.v=0;var m=document.documentElement.scrollHeight-window.innerHeight;return y<0||y>m?y:Math.max(0,Math.min(m,y+sv.v*(LAT+Math.min(e,.05))))}
- function draw(r,now){var q=[(window.pageXOffset||0),scrollY(now)-snap.y0,snap.w||1,snap.h||1],o=P.o;
-  g.useProgram(P.c);g.bindFramebuffer(g.FRAMEBUFFER,F.c);g.viewport(0,0,TW,TH);g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,T.s);g.uniform1i(U(P.c,'S'),0);
-  g.uniform4f(U(P.c,'R'),r.left,r.top,r.width,r.height);g.uniform4f(U(P.c,'Q'),q[0],q[1],q[2],q[3]);g.uniform1f(U(P.c,'G'),GAM);g.drawArrays(g.TRIANGLE_STRIP,0,4);
+ function qOf(e,y){return e?[(window.pageXOffset||0),y-e.y0,e.w||1,e.h||1]:[0,-1e5,1,1]}
+ function draw(r,now,fd){var y=scrollY(now),q=qOf(cur,y),q2=qOf(prv||cur,y),o=P.o,t1=cur?cur.t:T.s,t2=prv?prv.t:t1;
+  g.useProgram(P.c);g.bindFramebuffer(g.FRAMEBUFFER,F.c);g.viewport(0,0,TW,TH);
+  g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,t2);g.uniform1i(U(P.c,'S2'),1);g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,t1);g.uniform1i(U(P.c,'S'),0);
+  g.uniform4f(U(P.c,'R'),r.left,r.top,r.width,r.height);g.uniform4f(U(P.c,'Q'),q[0],q[1],q[2],q[3]);g.uniform4f(U(P.c,'Q2'),q2[0],q2[1],q2[2],q2[3]);g.uniform1f(U(P.c,'FD'),fd);g.uniform1f(U(P.c,'G'),GAM);g.drawArrays(g.TRIANGLE_STRIP,0,4);
   g.useProgram(P.b);g.uniform1fv(U(P.b,'W'),KW);g.uniform1i(U(P.b,'T'),0);
   g.bindFramebuffer(g.FRAMEBUFFER,F.t);g.bindTexture(g.TEXTURE_2D,T.c);g.uniform2f(U(P.b,'D'),1/TW,0);g.drawArrays(g.TRIANGLE_STRIP,0,4);
   g.bindFramebuffer(g.FRAMEBUFFER,F.b);g.bindTexture(g.TEXTURE_2D,T.t);g.uniform2f(U(P.b,'D'),0,1/TH);g.drawArrays(g.TRIANGLE_STRIP,0,4);
   g.useProgram(o);g.bindFramebuffer(g.FRAMEBUFFER,null);g.viewport(0,0,cv.width,cv.height);
-  var L=[['S',T.s],['B',T.b],['MK',T.mk],['L',T.l],['GE',T.ge],['KT',T.kt],['DX',T.dx],['ST',T.st],['CP',T.cp]];
+  var L=[['S',t1],['B',T.b],['MK',T.mk],['L',T.l],['GE',T.ge],['KT',T.kt],['DX',T.dx],['ST',T.st],['CP',T.cp]];
   for(var i=0;i<L.length;i++){g.activeTexture(g.TEXTURE0+i);g.bindTexture(g.TEXTURE_2D,L[i][1]);g.uniform1i(U(o,L[i][0]),i)}g.activeTexture(g.TEXTURE0);
   g.uniform4f(U(o,'R'),r.left,r.top,r.width,r.height);g.uniform4f(U(o,'Q'),q[0],q[1],q[2],q[3]);g.uniform1f(U(o,'G'),GAM);g.uniform1f(U(o,'A'),SHARP);
   g.drawArrays(g.TRIANGLE_STRIP,0,4)}
- function frame(now){raf=0;if(!M.on)return;try{var r=barEl.getBoundingClientRect(),k=[r.left,r.top,r.width,r.height,window.pageXOffset,window.pageYOffset,snap.ver,dpr,capVer,sv.v?now:0].join();
-  if(k!==lastKey){lastKey=k;draw(r,now)}}catch(e){M.err='draw '+e;off();return}
-  if(performance.now()<until)raf=requestAnimationFrame(frame)}
+ function frame(now){raf=0;if(!M.on)return;try{var fd=1;if(prv){fd=Math.min(1,(now-fT0)/fDur);fd=fd*fd*(3-2*fd);if(now-fT0>=fDur){var p0=prv;prv=null;free(p0);fd=1}}
+  var r=barEl.getBoundingClientRect(),k=[r.left,r.top,r.width,r.height,window.pageXOffset,window.pageYOffset,cur?cur.ver:0,dpr,capVer,sv.v?now:0,fd.toFixed(3)].join();
+  if(k!==lastKey){lastKey=k;draw(r,now,fd)}}catch(e){M.err='draw '+e;off();return}
+  if(performance.now()<until||prv)raf=requestAnimationFrame(frame)}
  function kick(ms){if(!M.on)return;until=Math.max(until,performance.now()+(ms||300));if(!raf)raf=requestAnimationFrame(frame)}
- /* page picture: the visible screen of #app with the page's own CSS, animations stopped at their end state.
-    Taken only while the page stands still (it costs a moment on a phone); card shapes (SVG backgrounds) are left
-    to their CSS colour + radius, so the picture is complete at once (no second pass, no flicker). */
+ /* page pictures: one per screen of #app (the 4 tabs), with the page's own CSS and animations stopped at their end state.
+    Other screens are taken in advance while nothing happens, so a tab switch has its picture at once; a new picture
+    always fades in over 0.2-0.35 s. Taking one costs a moment on a phone: not while a finger is down or the page
+    scrolls, but an outdated picture is replaced at most 1.5 s later anyway. Card shapes (SVG backgrounds) are left to
+    their CSS colour + radius, so a picture is complete at once. */
  function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
- function take(){st=0;if(!M.on)return;if(busy){again=1;return}if(touching||performance.now()-lastScroll<400){st=setTimeout(take,250);return}
-  var app=document.getElementById('app');if(!app)return;busy=true;var t0=performance.now();
-  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),H=Math.max(1,Math.ceil(ar.height)),y0=ar.top+(window.pageYOffset||0),
+ function liveScr(){var a=document.querySelector('#app .scr.on');return a?+a.getAttribute('data-scr')||0:0}
+ function nScr(){var n=document.querySelectorAll('#app .scr').length;return n||1}
+ function used(e){if(!e)return false;if(e===cur||e===prv)return true;for(var k in SN)if(SN[k]===e)return true;return false}
+ function free(e){if(e&&!used(e))try{g.deleteTexture(e.t)}catch(_){}}
+ function show(e,dur){if(!e||e===cur)return;if(cur&&dur>0){var p0=prv;prv=cur;free(p0);fT0=performance.now();fDur=dur}cur=e;M.ver++;kick(dur+120)}
+ M.screen=function(i){if(!M.on)return;curScr=i;if(SN[i])show(SN[i],350);else{dirty[i]=1;dirtyAt=dirtyAt||performance.now();sched(0)}};
+ function pick(){var now=performance.now(),idle=!touching&&now-lastScroll>400,i,n=nScr();curScr=liveScr();
+  if(!SN[curScr])return curScr;
+  if(dirty[curScr])return idle||now-dirtyAt>1500?curScr:-2;
+  if(!idle)return -1;
+  for(i=0;i<n;i++)if(!SN[i]||dirty[i])return i;return -1}
+ function take(){st=0;if(!M.on)return;if(busy){again=1;return}var which=pick();if(which===-2){st=setTimeout(take,250);return}if(which<0)return;
+  var app=document.getElementById('app');if(!app)return;busy=true;var t0=performance.now(),live=which===liveScr();delete dirty[which];if(!Object.keys(dirty).length)dirtyAt=0;
+  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),y0=ar.top+(window.pageYOffset||0),H,
    li=app.querySelectorAll('input,textarea,select'),cl=app.cloneNode(true),ci=cl.querySelectorAll('input,textarea,select'),i,css='',xs=new XMLSerializer();
    for(i=0;i<li.length&&i<ci.length;i++){if(li[i].type==='checkbox'||li[i].type==='radio'){if(li[i].checked)ci[i].setAttribute('checked','');else ci[i].removeAttribute('checked')}else ci[i].setAttribute('value',li[i].value)}
-   var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++)if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].parentNode.removeChild(sc[i]);
+   var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++){if((+sc[i].getAttribute('data-scr')||0)===which){if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].className+=' on'}else sc[i].parentNode.removeChild(sc[i])}
    var bi=cl.querySelectorAll('[style*="url("]');for(i=0;i<bi.length;i++){var es=bi[i].style;es.backgroundImage='';es.backgroundSize='';es.backgroundRepeat='';if(es.backgroundColor==='transparent')es.backgroundColor=''}
+   if(live)H=Math.max(1,Math.ceil(ar.height));
+   else{var box=document.createElement('div');box.setAttribute('aria-hidden','true');box.style.cssText='position:absolute;left:-30000px;top:0;width:'+W+'px;visibility:hidden;pointer-events:none';
+    box.appendChild(cl);document.body.appendChild(box);H=Math.max(1,Math.ceil(cl.getBoundingClientRect().height));document.body.removeChild(box);box.removeChild(cl)}
    var ss=document.querySelectorAll('style');for(i=0;i<ss.length;i++)if(ss[i].id!=='itb-css')css+=ss[i].textContent;
    /* sharper picture through a CSS scale inside: Safari does not scale foreignObject content by the SVG viewBox */
    var sp=document.querySelector('body>svg'),s=Math.max(.2,Math.min(1.5,window.devicePixelRatio||1,(M.max||4096)/W,(M.max||4096)/H,Math.sqrt(6e6/(W*H)))),PW=Math.floor(W*s),PH=Math.min(M.max||4096,Math.floor(H*s));s=PW/W;
    css+='*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}html,body{margin:0;width:'+PW+'px;height:'+PH+'px;overflow:hidden;background:#000}body::before{display:none}';
    var str='<svg xmlns="http://www.w3.org/2000/svg" width="'+PW+'" height="'+PH+'"><foreignObject x="0" y="0" width="'+PW+'" height="'+PH+'">'+
     '<html xmlns="http://www.w3.org/1999/xhtml"><head><style>'+esc(css)+'</style></head><body class="'+esc(document.body.className)+'"><div style="position:relative;width:'+W+'px;height:'+H+'px;transform:scale('+s+');transform-origin:0 0">'+(sp?xs.serializeToString(sp):'')+xs.serializeToString(cl)+'</div></body></html></foreignObject></svg>';
-   var hasImg=!!cl.querySelector('img'),tok=M.tok=(M.tok||0)+1,im=new Image();M.st.take=Math.round(performance.now()-t0);t0=performance.now();
-   im.onload=function(){M.st.load=Math.round(performance.now()-t0);M.img=im;requestAnimationFrame(function(){var t1=performance.now();
-     try{if(M.on){upl(T.s,im,0);snap={ok:true,ver:snap.ver+1,y0:y0,w:W,h:H};M.ver=snap.ver;M.st.n++;kick(60)}}catch(e){M.err='tex '+e}
+   var hasImg=!!cl.querySelector('img'),im=new Image();M.st.take=Math.round(performance.now()-t0);t0=performance.now();
+   im.onload=function(){M.st.load=Math.round(performance.now()-t0);M.img=im;
+    var put=function(src){requestAnimationFrame(function(){var t1=performance.now(),e;
+     try{if(M.on){e={t:tx(0,0,1),y0:y0,w:W,h:H,ver:(M.st.n++)};upl(e.t,src,0);var old=SN[which];SN[which]=e;if(which===curScr)show(e,cur?220:0);free(old)}}catch(x){M.err='tex '+x}
      M.st.up=Math.round(performance.now()-t1);
      /* <img> inside the picture decode a moment later (none on the bank page): upload once more */
-     if(hasImg)setTimeout(function(){try{if(M.on&&tok===M.tok){upl(T.s,im,0);snap.ver++;M.ver=snap.ver;kick(60)}}catch(_){}done()},350);else done();
-     if(/[?&]glsdump/.test(location.search)){dump(im,y0,W,H);stat()}})};
+     if(hasImg&&e)setTimeout(function(){try{if(M.on&&SN[which]===e){upl(e.t,im,0);e.ver++;M.ver++;kick(60)}}catch(_){}done()},350);else done();
+     if(/[?&]glsdump/.test(location.search)&&which===curScr){dump(im,y0,W,H);stat()}})};
+    /* decode off the main thread where the browser can */
+    if(window.createImageBitmap&&!hasImg)createImageBitmap(im).then(put,function(){put(im)});else put(im)};
    im.onerror=function(){M.err='img';done()};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(str)}catch(e){M.err='snap '+e;done()}}
  /* checking aid (only with ?glsdump on the local test server): send the page picture to compare it with the screen */
  function dump(im,y0,W,H){try{var c=document.createElement('canvas');c.width=im.width;c.height=im.height;c.getContext('2d').drawImage(im,0,0);var x=new XMLHttpRequest();x.open('POST','/glsdump?y0='+y0+'&w='+W+'&h='+H+'&sy='+(window.pageYOffset||0));x.send(c.toDataURL('image/png'))}catch(_){}}
  function stat(){try{var x=new XMLHttpRequest();x.open('POST','/glsstat');x.send(JSON.stringify({n:M.st.n,take:M.st.take,load:M.st.load,up:M.st.up,ver:M.ver,err:M.err,why:M.why,t:Math.round(performance.now())}))}catch(_){}}
- function done(){busy=false;if(again){again=0;sched(150)}}
+ function done(){busy=false;var w=pick();if(again||w!==-1){again=0;sched(w===curScr?60:250)}}
  function sched(ms){if(!M.on)return;if(st)clearTimeout(st);st=setTimeout(take,ms==null?200:ms)}
  function strip(s){return (s||'').replace(/(^|\s)down(?=\s|$)/g,' ').replace(/\s+/g,' ').trim()}
  function on(){var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';$('edge').style.display='none';cv.style.display='';M.on=true;lastKey='';try{paint()}catch(_){}kick(100)}
  function off(){M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(cv)cv.style.display='none';paint()}catch(_){}}
  M.kick=kick;M.snap=sched;M.off=off;M.size=function(){if(M.on){size();kick(100)}};
  M.start=function(){try{if(!init())return;M.max=g.getParameter(g.MAX_TEXTURE_SIZE);on();
-   var app=document.getElementById('app'),mo=function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(r.type==='attributes'&&r.attributeName==='class'&&strip(r.oldValue)===strip(r.target.getAttribute('class')))continue;M.why=r.type+':'+(r.attributeName||'')+':'+(r.target.className||r.target.nodeName||'')+':'+String(r.oldValue).slice(0,40);sched();return}};
+   var app=document.getElementById('app'),mo=function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(r.type==='attributes'&&r.attributeName==='class'&&strip(r.oldValue)===strip(r.target.getAttribute('class')))continue;M.why=r.type+':'+(r.attributeName||'')+':'+(r.target.className||r.target.nodeName||'')+':'+String(r.oldValue).slice(0,40);var ls=liveScr();if(!dirty[ls]){dirty[ls]=1;dirtyAt=dirtyAt||performance.now()}if(r.target===document.body)for(var j=0;j<nScr();j++)dirty[j]=1;sched();return}};
    if(app&&window.MutationObserver){new MutationObserver(mo).observe(app,{subtree:true,childList:true,attributes:true,attributeOldValue:true,characterData:true});new MutationObserver(mo).observe(document.body,{attributes:true,attributeOldValue:true})}
    var tch=function(e){touching=e.touches?e.touches.length:0};['touchstart','touchend','touchcancel'].forEach(function(t){window.addEventListener(t,tch,{passive:true,capture:true})});
-   window.addEventListener('scroll',function(){lastScroll=performance.now();kick(500)},{passive:true});window.addEventListener('resize',function(){sched(250);kick(300)});sched(0)}catch(e){M.err='start '+e;off()}};
+   window.addEventListener('scroll',function(){lastScroll=performance.now();kick(500)},{passive:true});window.addEventListener('resize',function(){for(var j=0;j<nScr();j++)dirty[j]=1;dirtyAt=performance.now();sched(250);kick(300)});sched(0)}catch(e){M.err='start '+e;off()}};
  return M})();
 
 if(!BASIC)GLS.start();
