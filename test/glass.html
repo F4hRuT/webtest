@@ -33,7 +33,9 @@ function apply(j){var sy=j.sy||0;app.style.height=(j.h?j.h+'px':'');window.scrol
  function ack(){var n=0;(function w(){var G1=window.ITB&&ITB.gls&&ITB.gls();if(G1&&G1.on&&G1.ver<=v0&&n++<40){setTimeout(w,100);return}fire()})()}
  function fire(){setTimeout(function(){var G=window.ITB&&ITB.gls&&ITB.gls();new Image().src='/ack?tok='+((/tok=(\w+)/.exec(location.search)||[])[1])+'&id='+j.id+'&bar='+[b.left,b.top,b.width,b.height].join(',')+'&dpr='+devicePixelRatio+'&gls='+encodeURIComponent(G?[G.on,G.ver,G.err].join('~'):'none')},j.wait||900)}
  if(im&&!im.complete)im.onload=ack;else ack()}
-function poll(){var x=new XMLHttpRequest();x.open('GET','spec.json?'+Date.now());x.onload=function(){try{var j=JSON.parse(x.responseText);if(j.id!==last){last=j.id;apply(j)}}catch(_){}};x.send();setTimeout(poll,120)}
+/* asks for a new spec 8 times a second, but only while specs keep coming: after 10 min without one (or with the server off) it stops, so a forgotten tab does not load the Mac */
+var seen=Date.now();
+function poll(){if(Date.now()-seen>6e5)return;var x=new XMLHttpRequest(),t=120;x.open('GET','spec.json?'+Date.now());x.onload=function(){try{var j=JSON.parse(x.responseText);if(j.id!==last){last=j.id;seen=Date.now();apply(j)}}catch(_){}};x.onloadend=function(){if(x.status!==200)t=2000;setTimeout(poll,t)};x.send()}
 if(/[?&]poll/.test(location.search))setTimeout(poll,600);
 if(/[?&]dump/.test(location.search))setTimeout(function(){var G=ITB.gls();var x=new XMLHttpRequest();x.open('POST','/dump');x.send(G.str||('none '+G.err))},3000);
 if(/[?&]snapdbg/.test(location.search))setInterval(function(){var G=window.ITB&&ITB.gls&&ITB.gls();if(!G||!G.img)return;var d=document.getElementById('dbg');if(!d){d=document.createElement('img');d.id='dbg';d.style.cssText='position:fixed;left:0;top:60px;width:200px;border:1px solid red;z-index:99;background:#333';document.body.appendChild(d)}if(d.src!==G.img.src)d.src=G.img.src},500);
