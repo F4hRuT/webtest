@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+html,body{margin:0;background:#000}
+.pg{height:4000px;background:repeating-linear-gradient(#000 0 140px,#0f0 140px 160px,#000 160px 310px)}
+.mk{position:fixed;left:0;width:10px;top:calc(100svh - env(safe-area-inset-bottom,0px) - 72px);height:2px;background:#f0f;z-index:5}
+.win{position:fixed;left:21px;width:360px;top:calc(100svh - env(safe-area-inset-bottom,0px) - 70px);height:62px;border-radius:31px;overflow:hidden;isolation:isolate}
+.mv{position:absolute;left:-21px;top:calc(70px + env(safe-area-inset-bottom,0px) - 100svh);width:402px;height:4000px;animation:mv linear both;animation-timeline:scroll(root block);animation-range:0px 100000px}
+@keyframes mv{from{transform:translateY(0)}to{transform:translateY(-100000px)}}
+.lens{position:absolute;inset:0;transform:scaleY(1.2);transform-origin:50% 50%;-webkit-mask-image:linear-gradient(#000 0 6px,transparent 10px calc(100% - 10px),#000 calc(100% - 6px));mask-image:linear-gradient(#000 0 6px,transparent 10px calc(100% - 10px),#000 calc(100% - 6px))}
+.lens .mv{left:-21px}
+.mul{position:absolute;inset:0;background:linear-gradient(90deg,rgba(128,128,128,1),#fff 30%);mix-blend-mode:multiply}
+.add{position:absolute;inset:0;background:linear-gradient(#444,#000 20%);mix-blend-mode:plus-lighter}
+.sat{position:absolute;inset:0;-webkit-backdrop-filter:saturate(3);backdrop-filter:saturate(3);-webkit-mask-image:linear-gradient(90deg,transparent 60%,#000 70%);mask-image:linear-gradient(90deg,transparent 60%,#000 70%)}
+.cap{position:absolute;left:100px;top:4px;width:95px;height:54px;border-radius:27px;-webkit-backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2);backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2)}
+#o{position:fixed;top:60px;left:8px;color:#fff;font:12px -apple-system;z-index:9;white-space:pre}
+</style></head><body><div class="pg"></div>
+<div class="win"><canvas class="mv" id="c1" width="402" height="4000"></canvas><div class="lens"><canvas class="mv" id="c2" width="402" height="4000"></canvas></div><div class="mul"></div><div class="add"></div><div class="sat"></div><div class="cap"></div></div>
+<div id="o"></div><div class="mk"></div>
+<script>
+function paint(c){var x=c.getContext('2d');for(var y=0;y<4000;y+=310){x.fillStyle='#204';x.fillRect(0,y,402,310);x.fillStyle='#f00';x.fillRect(0,y+140,402,20);x.fillStyle='#0af';x.fillRect(150,y+40,60,60)}}
+paint(document.getElementById('c1'));paint(document.getElementById('c2'));
+function setup(){var w=document.querySelector('.win').getBoundingClientRect(),H=document.documentElement.scrollHeight,V=window.innerHeight;
+ document.querySelectorAll('.mv').forEach(function(m){m.style.setProperty('--y0',(-w.top)+'px');m.style.setProperty('--y1',(-(H-V)-w.top)+'px')})}
+document.getElementById('o').textContent='range px: '+CSS.supports('animation-range','0px 100000px');
+if(/block/.test(location.search))setInterval(function(){var t=performance.now();while(performance.now()-t<150){}},200);
+</script></body></html>

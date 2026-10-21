@@ -13,6 +13,8 @@ html,body{margin:0;background:#000}
 .app i{position:absolute;display:block}
 .app img{position:absolute;image-rendering:pixelated}
 .dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 5px);z-index:20;display:block;width:100%;height:80px;visibility:hidden;border:0;background:transparent;color-scheme:dark}
+/* the menu stands still while Safari's own bottom bar folds/unfolds (it used to jump ~35 pt): anchored to the small viewport */
+@supports (top:100svh){.dock{bottom:auto;top:calc(100svh - env(safe-area-inset-bottom,0px) - 85px)}}
 /* page fade copy (?fade): the darkening under the menu from index.html */
 .fade{position:fixed;left:0;right:0;bottom:0;height:calc(72px + env(safe-area-inset-bottom,0px));z-index:19;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,.18) 18%,rgba(0,0,0,.45) 42%,rgba(0,0,0,.75) 68%,rgba(0,0,0,.93) 88%,#000 100%)}
 .fade::before,.fade::after{content:"";position:absolute;left:0;right:0;top:0;bottom:0}
@@ -38,15 +40,17 @@ function apply(j){var sy=j.sy||0;app.style.height=(j.h?j.h+'px':'');window.scrol
  var im=app.querySelector('img'),t0=Date.now();
  var G0=window.ITB&&ITB.gls&&ITB.gls(),v0=G0?G0.ver:0;
  function ack(){var n=0;(function w(){var G1=window.ITB&&ITB.gls&&ITB.gls();if(G1&&G1.on&&G1.ver<=v0&&n++<40){setTimeout(w,100);return}fire()})()}
- function fire(){setTimeout(function(){var G=window.ITB&&ITB.gls&&ITB.gls();new Image().src='/ack?tok='+((/tok=(\w+)/.exec(location.search)||[])[1])+'&id='+j.id+'&bar='+[b.left,b.top,b.width,b.height].join(',')+'&dpr='+devicePixelRatio+'&gls='+encodeURIComponent(G?[G.on,G.ver,G.err].join('~'):'none')},j.wait||900)}
+ function fire(){setTimeout(function(){var G=window.ITB&&ITB.gls&&ITB.gls();new Image().src='/ack?tok='+((/tok=(\w+)/.exec(location.search)||[])[1])+'&id='+j.id+'&bar='+[b.left,b.top,b.width,b.height].join(',')+'&dpr='+devicePixelRatio+'&gls='+encodeURIComponent(G?[G.on,G.ver,G.err,G.dbg?G.dbg():''].join('~'):'none')},j.wait||900)}
  if(im&&!im.complete)im.onload=ack;else ack()}
 /* asks for a new spec 8 times a second, but only while specs keep coming: after 10 min without one (or with the server off) it stops, so a forgotten tab does not load the Mac */
 var seen=Date.now();
 function poll(){if(Date.now()-seen>6e5)return;var x=new XMLHttpRequest(),t=120;x.open('GET','spec.json?'+Date.now());x.onload=function(){try{var j=JSON.parse(x.responseText);if(j.id!==last){last=j.id;seen=Date.now();apply(j)}}catch(_){}};x.onloadend=function(){if(x.status!==200)t=2000;setTimeout(poll,t)};x.send()}
 if(/[?&]poll/.test(location.search))setTimeout(poll,600);
+/* busy-block: ?block keeps the page script busy 150 ms of every 200 ms (to check that the glass moves without it) */
+if(/[?&]block/.test(location.search))setInterval(function(){var t=performance.now();while(performance.now()-t<150){}},200);
 if(/[?&]dump/.test(location.search))setTimeout(function(){var G=ITB.gls();var x=new XMLHttpRequest();x.open('POST','/dump');x.send(G.str||('none '+G.err))},3000);
 if(/[?&]snapdbg/.test(location.search))setInterval(function(){var G=window.ITB&&ITB.gls&&ITB.gls();if(!G||!G.img)return;var d=document.getElementById('dbg');if(!d){d=document.createElement('img');d.id='dbg';d.style.cssText='position:fixed;left:0;top:60px;width:200px;border:1px solid red;z-index:99;background:#333';document.body.appendChild(d)}if(d.src!==G.img.src)d.src=G.img.src},500);
 })();
 </script>
-<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=98"></script>
+<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=99"></script>
 </body></html>
