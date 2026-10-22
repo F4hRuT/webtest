@@ -27,6 +27,10 @@ if(/[?&]bc/.test(location.search)){
  app.style.height=(y+400)+'px'}
 else{app.style.height=(n*P+400)+'px';
 for(var i=0;i<n;i++)h+='<i style="top:'+(200+i*P)+'px;height:'+W+'px"></i>'}
+/* ?r=x,y,w,h,R,G,B,rad;... rectangles in iOS screen points (tab bar top at 791), placed so they sit the same way under our bar */
+var rq=(/[?&]r=([^&]+)/.exec(location.search)||[])[1];
+if(rq){var pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;height:100svh;visibility:hidden';document.body.appendChild(pr);var oy=pr.getBoundingClientRect().height-70-791;document.body.removeChild(pr);
+ decodeURIComponent(rq).split(';').forEach(function(t){var v=t.split(',').map(Number);if(v.length<7)return;h+='<i style="left:'+v[0]+'px;right:auto;top:'+(v[1]+oy)+'px;width:'+v[2]+'px;height:'+v[3]+'px;background:rgb('+v[4]+','+v[5]+','+v[6]+')'+(v[7]?';border-radius:'+v[7]+'px':'')+'"></i>'})}
 app.innerHTML=h;
 window.ITBH={sel:function(){},ready:function(){document.getElementById('dock').style.visibility='visible'}};
 setTimeout(function(){document.getElementById('dock').style.visibility='visible'},3000);
