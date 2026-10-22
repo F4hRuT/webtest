@@ -7,58 +7,65 @@
 <style>
 /* Example: the bank menu in a light theme. Same iOS geometry as menu.js (bar 360x62, capsule 99.55x54, tab centres
    53.64 + 84.227*i), white page. The rim is an HDR white glow (brighter than page white on HDR screens) on the same rows
-   as the dark-theme rim; on press the whole menu lights up. Modes: img (AVIF 10-bit PQ), vid (HEVC PQ video + mask), off. */
+   as the dark-theme rim; on press the whole menu lights up.
+   Three ways to get HDR, each browser gets the ones that work for it (see pick()):
+   av - AVIF 10-bit PQ with alpha (Safari), vd - HEVC PQ video under a mask (WebKit in other iOS browsers),
+   gm - Ultra HDR JPEG with a gain map, base picture plain white (Chrome/Yandex/Samsung on Android, desktop Chrome).
+   Without HDR every way shows plain white on the white bar, so nothing changes. */
 :root{color-scheme:light;box-sizing:border-box;--fg:#1c1c1e;--mut:#6c6c70;--act:#8fae00}
 *,*::before,*::after{box-sizing:inherit}
 html,body{margin:0;background:#fff;color:var(--fg);font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,Roboto,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
-main{min-height:100svh;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 160px}
+main{min-height:100vh;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 160px}
 h1{margin:0 0 6px;font-size:22px;font-weight:700}
 p{margin:0 0 14px;color:var(--mut);font-size:14px}
-.sw{display:flex;gap:8px;flex-wrap:wrap}
-.sw button{flex:1 1 0;min-width:0;padding:10px 6px;border:0;border-radius:12px;background:#f2f2f7;color:var(--fg);font:inherit;font-size:14px;font-weight:600}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw button{flex:1 1 30%;min-width:0;padding:9px 4px;border:0;border-radius:12px;background:#f2f2f7;color:var(--fg);font:inherit;font-size:13px;font-weight:600;-webkit-tap-highlight-color:transparent}
 .sw button[aria-pressed=true]{background:var(--fg);color:#fff}
 #st{margin-top:10px;font-size:12px;color:var(--mut)}
-/* dock: placed like the site (does not jump with the Safari toolbar) */
+/* dock: placed like the site (does not jump with the browser toolbar) */
 .dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 5px);height:80px;z-index:20;pointer-events:none}
 @supports (top:100svh){.dock{bottom:auto;top:calc(100svh - env(safe-area-inset-bottom,0px) - 85px)}}
 /* win: bar + 4 pt on each side (368 x 70), same frame as the rim map of the dark theme */
-.win{position:absolute;left:50%;top:11px;width:368px;height:70px;margin-left:-184px;transform-origin:50% 100%;pointer-events:auto;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.win{position:absolute;left:50%;top:11px;width:368px;height:70px;margin-left:-184px;transform-origin:50% 100%;pointer-events:auto;-webkit-tap-highlight-color:transparent;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .win>*{position:absolute;left:0;top:0;width:368px;height:70px}
 .bar{overflow:visible}
 .bar path{fill:#fff}
-.sh{filter:drop-shadow(0 6px 14px rgba(0,0,0,.10)) drop-shadow(0 0 1px rgba(0,0,0,.10))}
-.cap{left:0;top:8px;width:99.55px;height:54px;transition:transform .48s cubic-bezier(.3,1.35,.5,1)}
+.sh{-webkit-filter:drop-shadow(0 6px 14px rgba(0,0,0,.10)) drop-shadow(0 0 1px rgba(0,0,0,.10));filter:drop-shadow(0 6px 14px rgba(0,0,0,.10)) drop-shadow(0 0 1px rgba(0,0,0,.10))}
+.cap{left:0;top:8px;width:99.55px;height:54px;-webkit-transition:-webkit-transform .48s cubic-bezier(.3,1.35,.5,1);transition:transform .48s cubic-bezier(.3,1.35,.5,1)}
 .cap path{fill:rgba(0,0,0,.06)}
 .tabs{left:4px;top:4px;width:360px;height:62px}
 .tab{position:absolute;top:0;height:62px;margin:0;padding:0;border:0;background:none;color:var(--fg);font:inherit;cursor:pointer;outline:0;-webkit-appearance:none;appearance:none}
 .tab svg{position:absolute;overflow:visible}
 .tab .lb{position:absolute;left:-10px;right:-10px;top:39.3px;text-align:center;font-size:10px;line-height:12px;font-weight:500;white-space:nowrap;letter-spacing:.01em}
 .tab.on{color:var(--act)}
-/* HDR layers: the glow colour is about 1000 nits (page white is about 203), the screen shows as much as it can */
-.hdr{pointer-events:none;dynamic-range-limit:no-limit;-webkit-dynamic-range-limit:no-limit}
-.rim{opacity:1}
-.prs{opacity:0;transition:opacity .45s ease-out}
-.win.down .prs{opacity:1;transition:opacity .08s ease-out}
-video.hdr{object-fit:fill;-webkit-mask-size:100% 100%;mask-size:100% 100%}
-#vrim{-webkit-mask-image:url(hdr/rim_mask.png);mask-image:url(hdr/rim_mask.png)}
-#vprs{-webkit-mask-image:url(hdr/press_mask.png);mask-image:url(hdr/press_mask.png)}
-body[data-m=img] video.hdr,body[data-m=vid] img.hdr,body[data-m=off] .hdr{display:none}
-</style></head><body data-m="img">
+/* HDR layers: glow about 1000 nits (page white about 203), the screen shows as much as it can */
+.hdr{display:none;pointer-events:none;dynamic-range-limit:no-limit;-webkit-dynamic-range-limit:no-limit}
+.prs{opacity:0;-webkit-transition:opacity .45s ease-out;transition:opacity .45s ease-out}
+.win.down .prs{opacity:1;-webkit-transition:opacity .08s ease-out;transition:opacity .08s ease-out}
+video.hdr{object-fit:fill}
+.vd.rim{-webkit-mask:url(hdr/rim_mask.png) 0 0/100% 100% no-repeat;mask:url(hdr/rim_mask.png) 0 0/100% 100% no-repeat}
+.vd.prs{-webkit-mask:url(hdr/press_mask.png) 0 0/100% 100% no-repeat;mask:url(hdr/press_mask.png) 0 0/100% 100% no-repeat}
+body.u-av .av,body.u-vd .vd,body.u-gm .gm{display:block}
+/* debug: ?bg=888 page colour, ?nobar hides the white bar (to see each HDR layer by itself) */
+body.nobar .bar,body.nobar .cap{visibility:hidden}
+</style></head><body>
 <main>
 <h1>Светлое меню с HDR-обводкой</h1>
 <p>Пример: форма меню и пунктов как на сайте, фон белый. Белая обводка меню светится ярче белого фона (HDR) — там же и той же толщины, что в тёмной теме. При нажатии на меню светится всё меню.</p>
-<div class="sw" id="sw"><button data-m="img" aria-pressed="true">Картинка</button><button data-m="vid" aria-pressed="false">Видео</button><button data-m="off" aria-pressed="false">Без HDR</button></div>
+<div class="sw" id="sw"><button data-m="auto">Авто</button><button data-m="av">Картинка</button><button data-m="gm">Ultra HDR</button><button data-m="vd">Видео</button><button data-m="off">Без HDR</button></div>
 <div id="st"></div>
 </main>
 <div class="dock" id="dock">
  <div class="win" id="win">
   <svg class="bar sh" viewBox="0 0 368 70" aria-hidden="true"><path id="bp"/></svg>
+  <img class="hdr gm rim" data-src="hdr/rim.jpg" alt="" aria-hidden="true">
+  <img class="hdr gm prs" data-src="hdr/press.jpg" alt="" aria-hidden="true">
   <svg class="cap" id="cap" viewBox="0 0 99.55 54" aria-hidden="true"><path id="cp"/></svg>
   <div class="tabs" id="tabs" role="tablist" aria-label="Меню разделов"></div>
-  <img class="hdr rim" src="hdr/rim.avif" alt="" aria-hidden="true">
-  <img class="hdr prs" src="hdr/press.avif" alt="" aria-hidden="true">
-  <video class="hdr rim" id="vrim" src="hdr/white_pq.mp4" muted playsinline loop autoplay preload="auto" aria-hidden="true"></video>
-  <video class="hdr prs" id="vprs" src="hdr/white_pq.mp4" muted playsinline loop autoplay preload="auto" aria-hidden="true"></video>
+  <img class="hdr av rim" data-src="hdr/rim.avif" alt="" aria-hidden="true">
+  <img class="hdr av prs" data-src="hdr/press.avif" alt="" aria-hidden="true">
+  <video class="hdr vd rim" data-src="hdr/white_pq.mp4" muted playsinline webkit-playsinline loop autoplay preload="none" aria-hidden="true"></video>
+  <video class="hdr vd prs" data-src="hdr/white_pq.mp4" muted playsinline webkit-playsinline loop autoplay preload="none" aria-hidden="true"></video>
  </div>
 </div>
 <script>
@@ -92,32 +99,51 @@ var LABELS=['Главная','Тариф','Расходы','Поддержка']
 /* icon boxes of the v93 layout (centres 51.5 + 85.67*i), moved onto the tab centres of the current layout */
 var POS={home:[37.29,10.76,28.67,27],bars:[121.76,11.09,30.67,26],wallet:[208.55,11.42,28,26.33],chat:[295.35,11.09,26.33,26]};
 function icdx(i){return CX0+PITCH*i-(51.5+257/3*i)}
-document.getElementById('bp').setAttribute('d',bpath(BW,BH,4,4));
-document.getElementById('cp').setAttribute('d',path(PW,PH,0,0));
-var tabs=document.getElementById('tabs'),cap=document.getElementById('cap'),win=document.getElementById('win'),h='';
-for(var i=0;i<4;i++){var ic=ICONS[KEYS[i]],q=POS[KEYS[i]],tl=CX0+PITCH*i-PITCH/2;
+function $(i){return document.getElementById(i)}
+var Q=location.search,body=document.body,BP=bpath(BW,BH,4,4);
+$('bp').setAttribute('d',BP);
+$('cp').setAttribute('d',path(PW,PH,0,0));
+/* the Ultra HDR picture is a plain rectangle (JPEG has no transparency): cut it to the bar shape */
+var bm='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 368 70" width="368" height="70"><path d="'+BP+'"/></svg>')+'") 0 0/100% 100% no-repeat';
+[].forEach.call(document.querySelectorAll('.gm'),function(e){e.style.webkitMask=bm;e.style.mask=bm});
+var tabs=$('tabs'),cap=$('cap'),win=$('win'),h='',i;
+for(i=0;i<4;i++){var ic=ICONS[KEYS[i]],q=POS[KEYS[i]],tl=CX0+PITCH*i-PITCH/2;
  h+='<button type="button" class="tab" role="tab" aria-label="'+LABELS[i]+'" data-i="'+i+'" style="left:'+r2(tl)+'px;width:'+r2(PITCH)+'px"><svg viewBox="0 0 '+ic.w+' '+ic.h+'" width="'+q[2]+'" height="'+q[3]+'" style="left:'+r2(q[0]+icdx(i)-tl)+'px;top:'+q[1]+'px"><path fill="currentColor" fill-rule="evenodd" d="'+ic.d+'"/></svg><span class="lb">'+LABELS[i]+'</span></button>'}
 tabs.innerHTML=h;
-var sel=0;
-function set(i){sel=i;for(var k=0;k<4;k++){tabs.children[k].classList.toggle('on',k===i);tabs.children[k].setAttribute('aria-selected',k===i)}
- cap.style.transform='translateX('+r2(4+CX0+PITCH*i-PW/2)+'px)'}
+function set(i){for(var k=0;k<4;k++){var t=tabs.children[k];if(t.classList)t.classList.toggle('on',k===i);else t.className='tab'+(k===i?' on':'');t.setAttribute('aria-selected',k===i)}
+ var x='translateX('+r2(4+CX0+PITCH*i-PW/2)+'px)';cap.style.webkitTransform=x;cap.style.transform=x}
 set(0);
-/* press: the whole menu glows while the finger is down */
-function down(){win.classList.add('down')}function up(){win.classList.remove('down')}
-win.addEventListener('pointerdown',function(e){down();var t=e.target.closest&&e.target.closest('.tab');if(t)set(+t.dataset.i)});
-['pointerup','pointercancel','pointerleave'].forEach(function(n){win.addEventListener(n,up)});
+/* press: the whole menu glows while the finger is down (pointer events, or touch/mouse on old browsers) */
+function down(e){win.className='win down';var t=e.target;while(t&&t!==win&&!(t.getAttribute&&t.getAttribute('data-i')))t=t.parentNode;if(t&&t!==win)set(+t.getAttribute('data-i'))}
+function up(){win.className='win'}
+if(window.PointerEvent){win.addEventListener('pointerdown',down);['pointerup','pointercancel','pointerleave'].forEach(function(n){win.addEventListener(n,up)})}
+else{win.addEventListener('touchstart',down,{passive:true});win.addEventListener('touchend',up);win.addEventListener('touchcancel',up);win.addEventListener('mousedown',down);win.addEventListener('mouseup',up)}
 /* narrow screens: scale the menu down like the site (bar keeps 21 pt margins at 402) */
-function fit(){var w=document.documentElement.clientWidth,s=Math.min(1,(w-42)/BW);win.style.transform=s<1?'scale('+s+')':''}
+function fit(){var w=document.documentElement.clientWidth,s=Math.min(1,(w-42)/BW),x=s<1?'scale('+s+')':'';win.style.webkitTransform=x;win.style.transform=x}
 fit();addEventListener('resize',fit);
-/* mode switch and a status line: what the browser says about HDR */
-var sw=document.getElementById('sw'),st=document.getElementById('st'),vids=document.querySelectorAll('video.hdr');
-function mode(m){document.body.dataset.m=m;[].forEach.call(sw.children,function(b){b.setAttribute('aria-pressed',b.dataset.m===m)});
- if(m==='vid')[].forEach.call(vids,function(v){var p=v.play();if(p&&p.catch)p.catch(function(){})});
- try{history.replaceState(null,'','?m='+m)}catch(_){}}
-sw.addEventListener('click',function(e){var b=e.target.closest('button');if(b)mode(b.dataset.m)});
-var qm=(/[?&]m=(img|vid|off)/.exec(location.search)||[])[1];mode(qm||'img');
-var mq=matchMedia('(dynamic-range: high)').matches,sup=window.CSS&&CSS.supports&&(CSS.supports('dynamic-range-limit','no-limit')||CSS.supports('-webkit-dynamic-range-limit','no-limit'));
-st.textContent='Экран HDR: '+(mq?'да':'нет')+' · браузер умеет HDR-картинки: '+(sup?'да':'нет');
+/* which HDR way for this browser */
+var ua=navigator.userAgent,IOS=/iP(hone|od|ad)/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),APPLE=IOS||(/Macintosh/.test(ua)&&/AppleWebKit/.test(ua)&&!/Chrome|Chromium|Edg|OPR|YaBrowser|Firefox/.test(ua)),
+ OTHER=/CriOS|FxiOS|EdgiOS|YaBrowser|YaSearchBrowser|OPiOS|OPT\/|GSA\/|DuckDuckGo|Instagram|FBAN|FBAV|Line\//.test(ua)||!/Safari\//.test(ua),
+ SAFARI=APPLE&&!OTHER;
+function pick(){if(SAFARI)return ['av'];       /* Safari: HDR AVIF works (checked on iPhone, iOS 27) */
+ if(IOS)return ['av','vd'];                       /* Chrome/Yandex/others on iPhone: same engine, HDR pictures may be off there - add HDR video */
+ return ['gm']}                                   /* Android and computers: Ultra HDR (gain map), the format of Chrome/Android */
+var LBL={av:'картинка AVIF',vd:'видео',gm:'Ultra HDR'};
+function load(u){[].forEach.call(document.querySelectorAll('.'+u),function(e){if(!e.getAttribute('src')&&e.getAttribute('data-src')){e.setAttribute('src',e.getAttribute('data-src'));if(e.tagName==='VIDEO'){e.preload='auto';e.load()}}
+ if(e.tagName==='VIDEO'){var p=e.play();if(p&&p.catch)p.catch(function(){})}})}
+var sw=$('sw'),st=$('st'),cur='auto';
+function mode(m){cur=m;var use=m==='auto'?pick():m==='off'?[]:[m];
+ body.className=use.map(function(u){return 'u-'+u}).join(' ')+(/[?&]nobar/.test(Q)?' nobar':'');
+ use.forEach(load);
+ [].forEach.call(sw.children,function(b){b.setAttribute('aria-pressed',b.getAttribute('data-m')===m)});
+ try{history.replaceState(null,'',location.pathname+'?m='+m+(Q.replace(/^\?/,'&').replace(/&m=[a-z]+/g,'')))}catch(_){}
+ status(use)}
+function mm(q){try{return matchMedia(q).matches}catch(_){return false}}
+function status(use){st.textContent='Экран HDR: '+(mm('(dynamic-range: high)')?'да':mm('(dynamic-range: standard)')?'нет':'неизвестно')+
+ ' · сейчас: '+(use.length?use.map(function(u){return LBL[u]}).join(' + '):'без HDR')}
+sw.addEventListener('click',function(e){var b=e.target;while(b&&b!==sw&&!b.getAttribute('data-m'))b=b.parentNode;if(b&&b!==sw)mode(b.getAttribute('data-m'))});
+var bg=(/[?&]bg=([0-9a-f]{3,6})/i.exec(Q)||[])[1];if(bg)document.documentElement.style.background=body.style.background='#'+bg;
+mode((/[?&]m=(auto|av|vd|gm|off)/.exec(Q)||[])[1]||'auto');
 })();
 </script>
 </body></html>
