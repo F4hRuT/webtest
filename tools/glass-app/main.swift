@@ -85,6 +85,11 @@ final class Scene: UIViewController {
         } else {
             scroll.isHidden = true; plain.addSubview(iv)
         }
+        if let tb = tabBarController?.tabBar, let ts = j["titles"] as? [String] {
+            // custom tab titles/symbols (e.g. the bank menu's labels) to see how iOS lays the items out
+            let sy = j["symbols"] as? [String] ?? []
+            for (k, it) in (tb.items ?? []).enumerated() where k < ts.count { it.title = ts[k]; it.accessibilityHint = ts[k]; if k < sy.count { it.image = UIImage(systemName: sy[k]) } }
+        }
         if let tb = tabBarController?.tabBar {
             let show = (j["icons"] as? Bool) ?? true
             tb.tintColor = show ? nil : .clear

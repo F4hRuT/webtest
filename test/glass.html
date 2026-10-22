@@ -36,7 +36,7 @@ function apply(j){var sy=j.sy||0;app.style.height=(j.h?j.h+'px':'');window.scrol
  /* pictures go in as data URLs: the page picture for the glass (SVG) cannot load files */
  if(j.imgData)h+='<img src="'+j.imgData+'" style="left:'+(ox+(j.imgX||0))+'px;top:'+(oy+(j.imgY||0))+'px;width:'+(j.imgW||402)+'px">';
  (j.rects||[]).forEach(function(r){h+='<i style="left:'+(ox+r[0])+'px;top:'+(oy+r[1])+'px;width:'+r[2]+'px;height:'+r[3]+'px;background:'+col(r.slice(4,7).concat(r.length>8?[r[8]]:[]))+(r[7]?';border-radius:'+r[7]+'px':'')+'"></i>'});
- app.innerHTML=h;if(sy)window.scrollTo(0,sy);
+ app.innerHTML=h;if(sy)window.scrollTo(0,sy);if(j.tab!=null&&window.ITB)try{ITB.set(j.tab)}catch(_){}
  var im=app.querySelector('img'),t0=Date.now();
  var G0=window.ITB&&ITB.gls&&ITB.gls(),v0=G0?G0.ver:0;
  function ack(){var n=0;(function w(){var G1=window.ITB&&ITB.gls&&ITB.gls();if(G1&&G1.on&&G1.ver<=v0&&n++<40){setTimeout(w,100);return}fire()})()}
@@ -52,5 +52,5 @@ if(/[?&]dump/.test(location.search))setTimeout(function(){var G=ITB.gls();var x=
 if(/[?&]snapdbg/.test(location.search))setInterval(function(){var G=window.ITB&&ITB.gls&&ITB.gls();if(!G||!G.img)return;var d=document.getElementById('dbg');if(!d){d=document.createElement('img');d.id='dbg';d.style.cssText='position:fixed;left:0;top:60px;width:200px;border:1px solid red;z-index:99;background:#333';document.body.appendChild(d)}if(d.src!==G.img.src)d.src=G.img.src},500);
 })();
 </script>
-<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=102"></script>
+<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=103"></script>
 </body></html>
