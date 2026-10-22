@@ -450,22 +450,24 @@ GLS=(function(){
    cb(m)}catch(e){M.err='rim '+e;cb(null)}};im.onerror=function(){cb(null)};im.src=RIM}
  function el(tag,css,parent){var e=document.createElement(tag);e.style.cssText=css;if(parent)parent.appendChild(e);return e}
  function mskCss(url){return '-webkit-mask-image:url('+url+');mask-image:url('+url+');-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;'}
+ /* ?glsoff=lens,edge,rim,sat,cap — switch layers off one by one (checking aid) */
+ var OFF=(/[?&]glsoff=([a-z,]+)/.exec(location.search)||[])[1]||'';
  function build(L){var ab='position:absolute;left:0;top:0;width:'+BWX+'px;height:'+BHX+'px;pointer-events:none;';
   WIN=el('div',ab+'left:'+(-MP)+'px;top:'+(-MP)+'px;isolation:isolate;background:rgb(32,32,32);'+mskCss(L.mask));WIN.className='gwin';WIN.setAttribute('aria-hidden','true');
   function glassLayer(parent,tf,kind){var gp=el('div','position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0',parent),host=gp,ln=null;
    if(tf){ln=el('div','position:absolute;left:0;top:0;width:0;height:0',gp);ln._tf=tf;LENS.push(ln);host=ln}
    var im=el('img','position:absolute;left:0;top:0;width:1px;height:1px;max-width:none',host);im.className='gimg';im.alt='';im.decoding='sync';im._k=kind||0;GPG.push(gp);IMGS.push(im)}
   glassLayer(WIN,null);
-  BANDS.forEach(function(bd,bi){['l','r','s'].forEach(function(rg){var b=el('div',ab+mskCss(L.bands[bi][rg]),WIN);glassLayer(b,[rg,bd[2]])})});
+  if(OFF.indexOf('lens')<0)BANDS.forEach(function(bd,bi){['l','r','s'].forEach(function(rg){var b=el('div',ab+mskCss(L.bands[bi][rg]),WIN);glassLayer(b,[rg,bd[2]])})});
   /* window edges of iOS: picture of the change at the edge, stretched from the edge line over the bar (scale 1:100 about it),
      weighted per row by the mask; both pictures carry +64, taken off by one plus-darker layer */
-  [['et',1,L.wt],['eb',2,L.wb]].forEach(function(q){var b=el('div',ab+mskCss(q[2])+'mix-blend-mode:plus-lighter',WIN);glassLayer(b,[q[0],100],q[1])});
-  if(CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.w64+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
+  if(OFF.indexOf('edge')<0)[['et',1,L.wt],['eb',2,L.wb]].forEach(function(q){var b=el('div',ab+mskCss(q[2])+'mix-blend-mode:plus-lighter',WIN);glassLayer(b,[q[0],100],q[1])});
+  if(OFF.indexOf('edge')<0&&CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.w64+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
   /* order: x Kl, + A, - |A| (dark ring), then the colour gain last: no channel is cut at 0 or 255 before the end */
-  el('div',ab+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
-  el('div',ab+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);
-  if(CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.sub+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
-  el('div',ab+'-webkit-backdrop-filter:saturate('+SMAX+');backdrop-filter:saturate('+SMAX+');'+mskCss(L.sat),WIN);
+  if(OFF.indexOf('rim')<0){el('div',ab+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
+  el('div',ab+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);}
+  if(OFF.indexOf('rim')<0&&CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.sub+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
+  if(OFF.indexOf('sat')<0)el('div',ab+'-webkit-backdrop-filter:saturate('+SMAX+');backdrop-filter:saturate('+SMAX+');'+mskCss(L.sat),WIN);
   CAP=el('div','position:absolute;left:0;top:0;width:0;height:0;opacity:0;-webkit-backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2);backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2)',WIN);
   /* capsule outline = path() of the canvas menu (iOS shape, not a plain stadium): end caps from its resting shape, scaled with
      the height, and a plain middle; the caps are flat to 0.01 pt at CAPC from the ends */
@@ -513,6 +515,9 @@ GLS=(function(){
    if(live)H=Math.max(1,Math.ceil(ar.height));
    else{var box=document.createElement('div');box.setAttribute('aria-hidden','true');box.style.cssText='position:absolute;left:-30000px;top:0;width:'+W+'px;visibility:hidden;pointer-events:none';
     box.appendChild(cl);document.body.appendChild(box);H=Math.max(1,Math.ceil(cl.getBoundingClientRect().height));document.body.removeChild(box);box.removeChild(cl)}
+   /* black margin below the page: the window of iOS reaches ~14 pt below the bar, past the end of a short page or at the very
+      bottom; without rows there the edge pictures were empty while their -64 layer still darkened the menu */
+   H=Math.max(H+120,Math.ceil((window.innerHeight||700)*1.3));
    var ss=document.querySelectorAll('style');for(i=0;i<ss.length;i++)if(ss[i].id!=='itb-css'&&ss[i].id!=='itb-css2')css+=ss[i].textContent;
    /* sharper picture through a CSS scale inside: Safari does not scale foreignObject content by the SVG viewBox */
    var sp=document.querySelector('body>svg'),s=Math.max(.2,Math.min(1,(M.max||4096)/W,(M.max||4096)/H)),PW=Math.floor(W*s),PH=Math.min(M.max||4096,Math.floor(H*s));s=PW/W;
