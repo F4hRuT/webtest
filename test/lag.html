@@ -20,8 +20,13 @@ html,body{margin:0;background:#000}
 <script>
 (function(){
 var app=document.getElementById('app'),n=+((/[?&]n=(\d+)/.exec(location.search)||[])[1]||40),P=120,W=+((/[?&]w=(\d+)/.exec(location.search)||[])[1]||36),h='';
-app.style.height=(n*P+400)+'px';
-for(var i=0;i<n;i++)h+='<i style="top:'+(200+i*P)+'px;height:'+W+'px"></i>';
+if(/[?&]bc/.test(location.search)){
+ /* "barcode": white bands of random height and gap (fixed seed), so the page position can be read without ambiguity */
+ var a=12345>>>0,rnd=function(){a=(a+0x6D2B79F5)>>>0;var t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296},y=200;
+ while(y<6000){var hh=Math.round(12+rnd()*60),gg=Math.round(30+rnd()*120);h+='<i style="top:'+y+'px;height:'+hh+'px"></i>';y+=hh+gg}
+ app.style.height=(y+400)+'px'}
+else{app.style.height=(n*P+400)+'px';
+for(var i=0;i<n;i++)h+='<i style="top:'+(200+i*P)+'px;height:'+W+'px"></i>'}
 app.innerHTML=h;
 window.ITBH={sel:function(){},ready:function(){document.getElementById('dock').style.visibility='visible'}};
 setTimeout(function(){document.getElementById('dock').style.visibility='visible'},3000);
