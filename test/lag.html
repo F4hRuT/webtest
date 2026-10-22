@@ -28,9 +28,14 @@ if(/[?&]bc/.test(location.search)){
 else{app.style.height=(n*P+400)+'px';
 for(var i=0;i<n;i++)h+='<i style="top:'+(200+i*P)+'px;height:'+W+'px"></i>'}
 /* ?r=x,y,w,h,R,G,B,rad;... rectangles in iOS screen points (tab bar top at 791), placed so they sit the same way under our bar */
-var rq=(/[?&]r=([^&]+)/.exec(location.search)||[])[1];
-if(rq){var pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;height:100svh;visibility:hidden';document.body.appendChild(pr);var oy=pr.getBoundingClientRect().height-70-791;document.body.removeChild(pr);
- decodeURIComponent(rq).split(';').forEach(function(t){var v=t.split(',').map(Number);if(v.length<7)return;h+='<i style="left:'+v[0]+'px;right:auto;top:'+(v[1]+oy)+'px;width:'+v[2]+'px;height:'+v[3]+'px;background:rgb('+v[4]+','+v[5]+','+v[6]+')'+(v[7]?';border-radius:'+v[7]+'px':'')+'"></i>'})}
+var rq=(/[?&]r=([^&]+)/.exec(location.search)||[])[1],iq=(/[?&]img=([^&]+)/.exec(location.search)||[])[1];
+/* ?img=file,y : a picture 1206 px wide (3x screenshot crop) at iOS y (pt); inserted as a data URL — the glass snapshot cannot load files */
+function oyOf(){var d=document.getElementById('dock'),t=d?parseFloat(getComputedStyle(d).top):NaN;return isFinite(t)?t+15-791:-147}
+if(iq){var pp=decodeURIComponent(iq).split(','),L=new Image();L.crossOrigin='anonymous';L.onload=function(){var c=document.createElement('canvas');c.width=L.width;c.height=L.height;c.getContext('2d').drawImage(L,0,0);
+ var im=document.createElement('img');im.src=c.toDataURL('image/png');im.style.cssText='position:absolute;left:0;top:'+(+pp[1]+oyOf())+'px;width:402px';app.appendChild(im)};L.src=pp[0]}
+if(rq)document.addEventListener('DOMContentLoaded',function(){var oy=oyOf(),q='';
+ decodeURIComponent(rq).split(';').forEach(function(t){var v=t.split(',').map(Number);if(v.length<7)return;q+='<i style="left:'+v[0]+'px;right:auto;top:'+(v[1]+oy)+'px;width:'+v[2]+'px;height:'+v[3]+'px;background:rgb('+v[4]+','+v[5]+','+v[6]+')'+(v[7]?';border-radius:'+v[7]+'px':'')+'"></i>'});
+ app.insertAdjacentHTML('beforeend',q)});
 app.innerHTML=h;
 window.ITBH={sel:function(){},ready:function(){document.getElementById('dock').style.visibility='visible'}};
 setTimeout(function(){document.getElementById('dock').style.visibility='visible'},3000);
