@@ -321,7 +321,7 @@ window.ITB={gls:function(){return GLS},set:function(i){if(GLS&&GLS.screen)GLS.sc
    the edge), the per-pixel iOS rim (multiply / plus-lighter / plus-darker / saturate), the capsule (backdrop-filter). ---------- */
 GLS=(function(){
  var M={on:false,err:'',ver:0,st:{n:0,take:0,load:0,up:0},kick:function(){},snap:function(){},caps:function(){},screen:function(){},size:function(){}},
-  g,cv,P={},T={},F={},SN={},curScr=0,cur=null,dirty={},dirtyAt=0,busy=false,again=0,st=0,touching=0,lastScroll=-1e4,
+  g,cv,P={},T={},F={},SN={},SNS={},curScr=0,cur=null,dirty={},dirtyAt=0,busy=false,again=0,st=0,touching=0,lastScroll=-1e4,
   WIN=null,IMGS=[],GPG=[],LENS=[],CAP=null,geo={l:0,t:0,f:1},capKey='',
   SDA=!!(window.CSS&&CSS.supports&&CSS.supports('animation-timeline','scroll()'));
  var MP=4,BWX=BW+2*MP,BHX=BH+2*MP,GAM=.932,GR=.5,SMAX=1.6;
@@ -398,8 +398,15 @@ GLS=(function(){
    g.uniform1f(U(P.c,'DIR'),-1);g.uniform1f(U(P.c,'SO'),(WB0-BH+3)*tp);pass(P.c,Q,OC,OY);rd(Q,OC,OY)}
   finally{[A,B,C,R,Q].forEach(function(o){g.deleteFramebuffer(o.f);g.deleteTexture(o.t)})}
   var urls=[],k=0;
+  /* PNG packing off the page thread when the browser can (it took ~100 ms per picture on the page thread) */
+  if(enc()){var left=outs.length;outs.forEach(function(o,n){encW(o[0],o[1],o[2],function(u){urls[n]=u;if(--left===0)cb(urls,true)})});return}
   (function nx(){if(k>=outs.length){cb(urls,!!document.createElement('canvas').toBlob);return}var o=outs[k++],c=document.createElement('canvas');c.width=o[1];c.height=o[2];var x=c.getContext('2d'),id=x.createImageData(o[1],o[2]);id.data.set(o[0]);x.putImageData(id,0,0);
    if(c.toBlob)c.toBlob(function(b){urls.push(b?URL.createObjectURL(b):null);nx()},'image/png');else{urls.push(c.toDataURL('image/png'));nx()}})()}
+ var EW=null,EWn=0,EWcb={},EWok=null;
+ function enc(){if(EWok!==null)return EWok;EWok=false;try{if(!window.Worker||!window.OffscreenCanvas||!OffscreenCanvas.prototype.convertToBlob)return false;
+   var src='onmessage=function(e){var d=e.data;try{var c=new OffscreenCanvas(d.w,d.h),x=c.getContext("2d");x.putImageData(new ImageData(new Uint8ClampedArray(d.b),d.w,d.h),0,0);c.convertToBlob({type:"image/png"}).then(function(b){postMessage({id:d.id,b:b})},function(){postMessage({id:d.id,b:null})})}catch(err){postMessage({id:d.id,b:null})}}';
+   EW=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));EW.onmessage=function(e){var f=EWcb[e.data.id];delete EWcb[e.data.id];if(f)f(e.data.b?URL.createObjectURL(e.data.b):null)};EWok=true}catch(_){EWok=false}return EWok}
+ function encW(px,w,h,f){var id=++EWn;EWcb[id]=f;EW.postMessage({id:id,w:w,h:h,b:px.buffer},[px.buffer])}
  /* static layers from the iOS per-pixel rim map (RIM: out = A + Kl*L + Kc*(G-L) + beta*page) and the edge geometry */
  function png(w,h,fill){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d'),id=x.createImageData(w,h);fill(id.data);x.putImageData(id,0,0);return c.toDataURL('image/png')}
  function edt1(f,n,o,v,z){var k=0,q,s;v[0]=0;z[0]=-1e20;z[1]=1e20;
@@ -501,7 +508,7 @@ GLS=(function(){
   try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),y0=ar.top-de.getBoundingClientRect().top,H,_lg=LG('take',{art:ar.top}),
    li=app.querySelectorAll('input,textarea,select'),cl=app.cloneNode(true),ci=cl.querySelectorAll('input,textarea,select'),i,css='',xs=new XMLSerializer();
    for(i=0;i<li.length&&i<ci.length;i++){if(li[i].type==='checkbox'||li[i].type==='radio'){if(li[i].checked)ci[i].setAttribute('checked','');else ci[i].removeAttribute('checked')}else ci[i].setAttribute('value',li[i].value)}
-   var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++){if((+sc[i].getAttribute('data-scr')||0)===which){if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].className+=' on'}else sc[i].parentNode.removeChild(sc[i])}
+   var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++){if((+sc[i].getAttribute('data-scr')||0)===which){if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].className+=' on';sc[i].style.removeProperty('--dx');if(!sc[i].getAttribute('style'))sc[i].removeAttribute('style')}else sc[i].parentNode.removeChild(sc[i])}
    var bi=cl.querySelectorAll('[style*="url("]');for(i=0;i<bi.length;i++){var es=bi[i].style;es.backgroundImage='';es.backgroundSize='';es.backgroundRepeat='';if(es.backgroundColor==='transparent')es.backgroundColor=''}
    if(live)H=Math.max(1,Math.ceil(ar.height));
    else{var box=document.createElement('div');box.setAttribute('aria-hidden','true');box.style.cssText='position:absolute;left:-30000px;top:0;width:'+W+'px;visibility:hidden;pointer-events:none';
@@ -512,6 +519,8 @@ GLS=(function(){
    css+='*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}html,body{margin:0;width:'+PW+'px;height:'+PH+'px;overflow:hidden;background:#000}body::before{display:none}';
    var str='<svg xmlns="http://www.w3.org/2000/svg" width="'+PW+'" height="'+PH+'"><foreignObject x="0" y="0" width="'+PW+'" height="'+PH+'">'+
     '<html xmlns="http://www.w3.org/1999/xhtml"><head><style>'+esc(css)+'</style></head><body class="'+esc(document.body.className)+'"><div style="position:relative;width:'+W+'px;height:'+H+'px;transform:scale('+s+');transform-origin:0 0">'+(sp?xs.serializeToString(sp):'')+xs.serializeToString(cl)+'</div></body></html></foreignObject></svg>';
+   /* same picture as last time (tab switch, a toggle set back, etc.): nothing to do — no work on the phone */
+   if(SNS[which]===str&&SN[which]){if(which===curScr)show(SN[which]);busy=false;M.st.skip=(M.st.skip||0)+1;done();return}SNS[which]=str;
    var hasImg=!!cl.querySelector('img'),im=new Image();M.st.take=Math.round(performance.now()-t0);t0=performance.now();
    var make=function(fin){var t1=performance.now();try{g.bindTexture(g.TEXTURE_2D,T.s);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,im);
      if(WIN){var wr=WIN.getBoundingClientRect(),wf=wr.width/BWX||1;WINP={l:wr.left+(MP-15.67)*wf,r:wr.right-(MP-15.67)*wf,f:wf}}
@@ -537,6 +546,15 @@ GLS=(function(){
  function off(){M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(WIN)WIN.style.display='none';paint()}catch(_){}}
  var LGQ=[],LGON=/[?&]glslog/.test(location.search);function LG(t,o){if(!LGON)return;o=o||{};o.t=t;o.ms=Math.round(performance.now());o.py=Math.round((window.pageYOffset||0)*10)/10;var v=window.visualViewport;if(v){o.vt=Math.round(v.offsetTop*10)/10;o.vh=Math.round(v.height*10)/10;o.vpt=Math.round(v.pageTop*10)/10}o.ih=window.innerHeight;o.ch=document.documentElement.clientHeight;if(WIN){var r=WIN.getBoundingClientRect();o.wt=Math.round(r.top*10)/10}var d=document.getElementById('dock');if(d){o.dt=Math.round(d.getBoundingClientRect().top*10)/10;o.dcs=getComputedStyle(d).top}if(IMGS[0]){var cs=getComputedStyle(IMGS[0]);o.tf=cs.transform;o.it=IMGS[0].style.top}o.gt=Math.round(geo.t*10)/10;LGQ.push(JSON.stringify(o))}
  if(LGON){setInterval(function(){LG('tick')},100);setInterval(function(){if(!LGQ.length)return;try{var x=new XMLHttpRequest();x.open('POST','/glslog');x.send(LGQ.join('\n'));LGQ=[]}catch(_){}},400);window.addEventListener('resize',function(){LG('resize')});if(window.visualViewport)visualViewport.addEventListener('resize',function(){LG('vvresize')})}
+ /* ?glshud: small debug line at the top of the screen (pictures made / shown, long frames, scroll events per second) —
+    readable from a screenshot or a screen recording of the phone */
+ if(/[?&]glshud/.test(location.search)){(function(){var d=document.createElement('div'),fr=[],se=[],lt=performance.now(),shows=0,ov=0;
+  d.style.cssText='position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);z-index:99;font:600 13px/1.25 -apple-system,monospace;color:#0f0;background:rgba(0,0,0,.75);padding:3px 6px;pointer-events:none;white-space:pre';
+  document.body.appendChild(d);addEventListener('scroll',function(){se.push(performance.now())},{passive:true});
+  (function f(t){fr.push(t-lt);lt=t;if(fr.length>240)fr.shift();requestAnimationFrame(f)})(lt);
+  setInterval(function(){var now=performance.now();while(se.length&&now-se[0]>1000)se.shift();if(M.ver!==ov){shows++;ov=M.ver}
+   var long=0,mx=0;fr.forEach(function(x){if(x>34)long++;if(x>mx)mx=x});
+   d.textContent='snap '+M.st.n+' show '+M.ver+' up '+M.st.up+'ms take '+M.st.take+' load '+M.st.load+(M.err?' ERR '+M.err:'')+'\nframes>34ms '+long+'/'+fr.length+' max '+Math.round(mx)+'ms  scroll ev/s '+se.length+'  y '+Math.round(window.pageYOffset||0)},250)})()}
  M.dbg=function(){var i=IMGS[0];if(!i)return 'noimg';var cs=getComputedStyle(i);return [SDA,cs.animationName,cs.transform,(cs.animationTimeline||cs.webkitAnimationTimeline||'?'),window.pageYOffset,i.style.top,i.src.slice(0,30)].join('|')};
  M.off=off;M.snap=sched;M.size=function(){if(M.on)place()};
  M.start=function(){try{if(!init())return;rimMap(function(m){if(!m){off();return}layers(m,function(L){try{build(L);start2()}catch(e){M.err='build '+e;off()}})})}catch(e){M.err='start '+e;off()}};
@@ -547,7 +565,11 @@ GLS=(function(){
   if(app&&window.MutationObserver){new MutationObserver(mo).observe(app,{subtree:true,childList:true,attributes:true,attributeOldValue:true,characterData:true});new MutationObserver(mo).observe(document.body,{attributes:true,attributeOldValue:true})}
   var tch=function(e){touching=e.touches?e.touches.length:0};['touchstart','touchend','touchcancel'].forEach(function(t){window.addEventListener(t,tch,{passive:true,capture:true})});
   window.addEventListener('scroll',function(){lastScroll=performance.now();if(!SDA)jsScroll()},{passive:true});
-  var rp=function(){clearTimeout(rp.t);rp.t=setTimeout(place,120)};window.addEventListener('resize',function(){for(var j=0;j<nScr();j++)dirty[j]=1;dirtyAt=performance.now();sched(250);rp()});
+  /* Safari folds/unfolds its toolbar on every scroll direction change: that is a resize of the height only. The page layout does
+     not depend on the height (only the dock uses svh), so the pictures are made again only when the width changes — before
+     v101 every toolbar move re-made the pictures of all 4 tabs: hundreds of ms of work on the phone right while scrolling */
+  var rp=function(){clearTimeout(rp.t);rp.t=setTimeout(place,120)},lastW=document.documentElement.clientWidth;
+  window.addEventListener('resize',function(){var w=document.documentElement.clientWidth;if(w!==lastW){lastW=w;for(var j=0;j<nScr();j++)dirty[j]=1;dirtyAt=performance.now();sched(250)}rp()});
   if(window.visualViewport)visualViewport.addEventListener('resize',rp);[300,900,1600].forEach(function(t){setTimeout(place,t)});sched(0)}
  return M})();
 
