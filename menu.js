@@ -347,13 +347,13 @@ GLS=(function(){
  var FG=PR+'uniform sampler2D T;'+TONE+'void main(){gl_FragColor=vec4(clamp(tone(texture2D(T,v).rgb),0.,255.)/255.,1.);}';
  /* iOS sees only a window around the bar (15 pt above, 13.67 below, 15.67 to the sides, in 8 px cells) and repeats its edge
     cell outward. The page-wide picture cannot do that while Safari scrolls it, so the difference at the top and bottom edge
-    is a separate picture per screen: rows = position of the window edge on the page, value = 64 + change of the glass if the
+    is two pictures per screen (what to add, what to take away): rows = position of the window edge on the page, value = change of the glass if the
     edge cell (E) replaced what lies beyond the window (A), at the largest weight WM. On screen it is stretched from the
-    window edge over the bar and weighted per row (plus-lighter, then -64 by a plus-darker layer). */
- var NA=40,FC=PR+'uniform sampler2D T,C;uniform vec2 E2;uniform float DIR,PY,SO,WM,AS,EG,AW['+NA+'];'+TONE+
+    window edge over the bar and weighted per row. */
+ var NA=40,FC=PR+'uniform sampler2D T,C;uniform vec2 E2;uniform float DIR,PY,SO,WM,AS,EG,SG,AW['+NA+'];'+TONE+
   'void main(){vec3 e=.5*(texture2D(T,v+vec2(0.,DIR*E2.x*PY)).rgb+texture2D(T,v+vec2(0.,DIR*E2.y*PY)).rgb),a=vec3(0.);'+
   'for(int i=0;i<'+NA+';i++){a+=AW[i]*texture2D(T,v-vec2(0.,DIR*(float(i)+.5)*AS*PY)).rgb;}'+
-  'vec3 u=texture2D(C,v+vec2(0.,DIR*SO*PY)).rgb;vec3 d=EG*4.*(tone(u+.25*WM*(e-a))-tone(u));gl_FragColor=vec4(clamp((64.+d)/255.,0.,1.),1.);}';
+  'vec3 u=texture2D(C,v+vec2(0.,DIR*SO*PY)).rgb;vec3 d=EG*4.*(tone(u+.25*WM*(e-a))-tone(u));vec3 o=SG>0.?clamp(d,0.,255.):255.-clamp(-d,0.,255.);gl_FragColor=vec4(o/255.,1.);}';
  function sh(t,s){var o=g.createShader(t);g.shaderSource(o,s);g.compileShader(o);if(!g.getShaderParameter(o,g.COMPILE_STATUS))throw g.getShaderInfoLog(o);return o}
  function prog(fs){var p=g.createProgram();g.attachShader(p,sh(g.VERTEX_SHADER,VS));g.attachShader(p,sh(g.FRAGMENT_SHADER,fs));g.bindAttribLocation(p,0,'p');g.linkProgram(p);if(!g.getProgramParameter(p,g.LINK_STATUS))throw g.getProgramInfoLog(p);p.u={};return p}
  function U(p,n){return p.u[n]||(p.u[n]=g.getUniformLocation(p,n))}
@@ -396,8 +396,10 @@ GLS=(function(){
    g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,B.t);g.uniform1i(U(P.c,'T'),0);g.uniform1f(U(P.c,'G'),GAM);g.uniform1fv(U(P.c,'AW'),aw);g.uniform1f(U(P.c,'PY'),1/OY);g.uniform1f(U(P.c,'WM'),WMX);
    /* E: the edge cell (2.667 pt) sampled at 1/4 and 3/4 of it; offsets in texels (tp per pt) */
    g.uniform2f(U(P.c,'E2'),.6667*tp,2*tp);g.uniform1f(U(P.c,'AS'),dz*tp);g.uniform1f(U(P.c,'EG'),EGAIN);
-   g.uniform1f(U(P.c,'DIR'),1);g.uniform1f(U(P.c,'SO'),(WT0+3)*tp);pass(P.c,Q,OC,OY);rd(Q,OC,OY);
-   g.uniform1f(U(P.c,'DIR'),-1);g.uniform1f(U(P.c,'SO'),(WB0-BH+3)*tp);pass(P.c,Q,OC,OY);rd(Q,OC,OY)}
+   /* per edge two pictures: what to add (plus-lighter) and what to take away (plus-darker, white = nothing); where there is
+      nothing to change both are exact no-ops (the former +64/-64 pair left ±1 rounding speckles on the phone) */
+   [[1,WT0+3],[-1,WB0-BH+3]].forEach(function(q){g.uniform1f(U(P.c,'DIR'),q[0]);g.uniform1f(U(P.c,'SO'),q[1]*tp);
+    g.uniform1f(U(P.c,'SG'),1);pass(P.c,Q,OC,OY);rd(Q,OC,OY);g.uniform1f(U(P.c,'SG'),-1);pass(P.c,Q,OC,OY);rd(Q,OC,OY)})}
   finally{[A,B,C,R,Q].forEach(function(o){g.deleteFramebuffer(o.f);g.deleteTexture(o.t)})}
   var urls=[],k=0;
   /* PNG packing off the page thread when the browser can (it took ~100 ms per picture on the page thread) */
@@ -436,7 +438,6 @@ GLS=(function(){
    AT[i]=Math.min(1,wTail(us+WT0)/WMX);AB[i]=Math.min(1,wTail(WB0-us)/WMX)}
   out.wt=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=Math.round(AT[i]*255)});
   out.wb=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=Math.round(AB[i]*255)});
-  out.w64=png(W3,H3,function(d){for(i=0;i<N;i++){var v=255-Math.round(64*(Math.round(AT[i]*255)+Math.round(AB[i]*255))/255);d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}});
   out.sat=png(W3,H3,function(d){for(i=0;i<N;i++){var s=map.kl[i]>.05?map.kc[i]/map.kl[i]:1,w=Math.min(1,Math.max(0,(s-1)/(SMAX-1)));d[i*4+3]=Math.round(w*255)}});
   /* ends (l, r) and the straight part (s) blend over 26..36 pt: the s copy lies on top with a soft edge, no seam */
   out.bands=BANDS.map(function(bd){var o={};['l','r','s'].forEach(function(rg){o[rg]=png(W3,H3,function(d){for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var bx=x/3-MP,t=T3[i],
@@ -464,9 +465,9 @@ GLS=(function(){
   glassLayer(WIN,null);
   if(OFF.indexOf('lens')<0)BANDS.forEach(function(bd,bi){['l','r','s'].forEach(function(rg){var b=el('div',ab+mskCss(L.bands[bi][rg]),WIN);glassLayer(b,[rg,bd[2]])})});
   /* window edges of iOS: picture of the change at the edge, stretched from the edge line over the bar (scale 1:100 about it),
-     weighted per row by the mask; both pictures carry +64, taken off by one plus-darker layer */
-  if(OFF.indexOf('edge')<0)[['et',1,L.wt],['eb',2,L.wb]].forEach(function(q){var b=el('div',ab+mskCss(q[2])+'mix-blend-mode:plus-lighter',WIN);glassLayer(b,[q[0],100],q[1])});
-  if(OFF.indexOf('edge')<0&&CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.w64+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
+     weighted per row by the mask; one picture adds (plus-lighter), the other takes away (plus-darker) */
+  if(OFF.indexOf('edge')<0&&CSS.supports('mix-blend-mode','plus-darker'))[['et',1,L.wt,'plus-lighter'],['et',2,L.wt,'plus-darker'],['eb',3,L.wb,'plus-lighter'],['eb',4,L.wb,'plus-darker']].forEach(function(q){
+   var b=el('div',ab+mskCss(q[2])+'mix-blend-mode:'+q[3],WIN);glassLayer(b,[q[0],100],q[1])});
   /* order: x Kl, + A, - |A| (dark ring), then the colour gain last: no channel is cut at 0 or 255 before the end */
   if(OFF.indexOf('rim')<0){el('div',ab+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
   el('div',ab+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);}
