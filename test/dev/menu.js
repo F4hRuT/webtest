@@ -349,6 +349,9 @@ GLS=(function(){
   if(!(CSS.supports('-webkit-backdrop-filter','blur(1px)')||CSS.supports('backdrop-filter','blur(1px)')))return false;
   return CSS.supports('mix-blend-mode','plus-lighter')&&CSS.supports('mix-blend-mode','multiply')}
  /* weight the blur of iOS gives to what lies beyond a window edge at distance d (pt): tails of 75.5% gauss 13.26 + 24.5% gauss 25.7 */
+ /* rim samplers: EO pt outward, blur, DP pt inward fade, strength */
+ var RS=((/[?&]rs=([\d.,]+)/.exec(location.search)||[])[1]||'15,16,1.4,1').split(',').map(Number);
+ var RSB=(function(){var EO=RS[0],DP=RS[2];return [[0,MP-EO,BWX,EO+DP,'t'],[0,MP+BH-DP,BWX,EO+DP,'b'],[MP-EO,0,EO+BH/2,BHX,'l'],[MP+BW-BH/2,0,EO+BH/2,BHX,'r']]})();
  function Qn(z){var t=1/(1+.3275911*z),y=t*(.254829592+t*(-.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))));return .5*y*Math.exp(-z*z/2)}
  function Wd(d){return .755*Qn(d/13.26)+.245*Qn(d/25.7)}
  function png(w,h,fill){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d'),im=x.createImageData(w,h);fill(im.data);x.putImageData(im,0,0);return c.toDataURL('image/png')}
@@ -382,6 +385,12 @@ GLS=(function(){
     if(best>=9)continue;var t=ins?-(best-.5):(best-.5);if(c>.03&&c<.97)t=.5-c;
     var bx=x/3-MP,by=y/3-MP,r=BH/2,w=0;if(bx<r||bx>BW-r){var ex=bx<r?r-bx:bx-(BW-r),ey=by-r;w=Math.abs(ex)/Math.max(.001,Math.sqrt(ex*ex+ey*ey))}w=w*w*(3-2*w);
     var a=w*prof(SIDE,t)+(1-w)*prof(TOP,t);d[(y*W3+x)*4+3]=Math.round(Math.min(1,a)*255)}});
+  /* masks of the rim sampler boxes: bar coverage (1 - beta) x fade from the edge inward (K at the edge, K/2 at .35 DP, 0 at DP) */
+  out.rs=RSB.map(function(b){var w=Math.round(b[2]*3),h=Math.round(b[3]*3),K=RS[3],DP=RS[2];
+   function f(t){if(t<=0)return K;if(t>=DP)return 0;return t<.35*DP?K*(1-.5*t/(.35*DP)):K*.5*(1-(t-.35*DP)/(.65*DP))}
+   return png(w,h,function(d){for(var j=0;j<h;j++)for(var i=0;i<w;i++){var X=Math.round(b[0]*3)+i,Y=Math.round(b[1]*3)+j;if(X<0||Y<0||X>=W3||Y>=H3)continue;
+    var al=Math.min(1,Math.max(0,1-map.b[Y*W3+X]));if(al<=0)continue;var px=X/3-MP,py=Y/3-MP,t=b[4]==='t'?py:b[4]==='b'?BH-py:b[4]==='l'?px:BW-px;
+    d[(j*w+i)*4+3]=Math.round(al*f(t)*255)}})});
   out.sat=png(W3,H3,function(d){for(i=0;i<N;i++){var s=map.kl[i]>.05?map.kc[i]/map.kl[i]:1,w=Math.min(1,Math.max(0,(s-1)/(SMAX-1)));d[i*4+3]=Math.round(w*255)}});
   cb(out)}
  /* v108: A and Kl of the map refitted per pixel on the iPhone: the bank main page as a picture, under the real iOS bar (test app
@@ -414,16 +423,11 @@ GLS=(function(){
   /* the rim of iOS looks outward (refraction: its outer rows take the glass 3-9 pt outside the bar, and the window edge cell
      is repeated outward), so a bright thing a few pt from the bar lights the rim. Safari blurs with nothing beyond a box, so a
      blur box that reaches out from the edge gives, on the bar's outer rows, a mix of the glass and of what is outside */
-  function rimSamp(){var P=(/[?&]rs=([\d.,]+)/.exec(location.search)||[])[1],v=(P||'15,16,1.4,1').split(',').map(Number),EO=v[0],SG=v[1],DP=v[2],K=v[3];
-   function m(dir,len){return 'linear-gradient('+dir+',rgba(0,0,0,'+K+') 0,rgba(0,0,0,'+K+') '+EO+'px,rgba(0,0,0,'+(K*.5).toFixed(3)+') '+(EO+len*.35).toFixed(2)+'px,rgba(0,0,0,0) '+(EO+len)+'px)'}
-   function box(x,y,w,h,mk2){el('div','position:absolute;pointer-events:none;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'+bf('blur('+SG+'px)')+mk2,WIN)}
-   function mm(g,px,py){return '-webkit-mask-image:url('+L.mask+'),'+g+';mask-image:url('+L.mask+'),'+g+';-webkit-mask-composite:source-in;mask-composite:intersect;-webkit-mask-size:'+BWX+'px '+BHX+'px,100% 100%;mask-size:'+BWX+'px '+BHX+'px,100% 100%;-webkit-mask-position:'+px+'px '+py+'px,0 0;mask-position:'+px+'px '+py+'px,0 0;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;'}
-   /* top and bottom: full width, from EO pt outside to DP pt inside */
-   box(0,MP-EO,BWX,EO+DP,mm(m('to bottom',DP),0,EO-MP));
-   box(0,MP+BH-DP,BWX,EO+DP,mm(m('to top',DP),0,-(MP+BH-DP)));
-   /* ends: from EO pt outside to the start of the straight part */
-   box(MP-EO,0,EO+BH/2,BHX,mm(m('to right',DP),EO-MP,0));
-   box(MP+BW-BH/2,0,EO+BH/2,BHX,mm(m('to left',DP),-(MP+BW-BH/2),0))}
+  function rimSamp(){
+   /* each box shows only inside the bar: its mask (bar shape x fade inward) is one precomputed picture — v107/v108 combined two
+      masks with mask-composite, which Safari on the iPhone ignored, and the boxes showed as blurred plates around the menu */
+   function box(x,y,w,h,mu){el('div','position:absolute;pointer-events:none;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;'+bf('blur('+RS[1]+'px)')+mskCss(mu),WIN)}
+   RSB.forEach(function(b,k){box(b[0],b[1],b[2],b[3],L.rs[k])})}
   /* order: x Kl, + A, - |A| (dark ring), then the colour gain last: no channel is cut at 0 or 255 before the end */
   if(OFF.indexOf('rim')<0){if(OFF.indexOf('mul')<0)el('div',ab+mk+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
    if(OFF.indexOf('klx')<0)el('div',ab+mskCss(L.klx)+bf('brightness(1.001)')+'mix-blend-mode:plus-lighter',WIN);
