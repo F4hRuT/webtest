@@ -13,8 +13,10 @@
    gm - Ultra HDR JPEG with a gain map, base picture plain white (Chrome/Yandex/Samsung on Android, desktop Chrome).
    gm is kept as simple as possible (bar-sized picture, plain corner rounding, no mask/fade/blend): with a mask and a fade
    Chrome on a OnePlus 13R drew the menu with broken tiles and froze.
-   Without HDR every way shows plain white on the white bar, so nothing changes. */
-:root{color-scheme:light;box-sizing:border-box;--fg:#1c1c1e;--mut:#6c6c70;--act:#8fae00}
+   Without HDR every way shows plain white on the white bar, so nothing changes.
+   sim - for screens without HDR (Chrome says dynamic-range: standard): the bar is a little grey and the rim is plain white
+   with the same rows, so the rim still looks lit; on press the bar turns white. */
+:root{color-scheme:light;box-sizing:border-box;--fg:#1c1c1e;--mut:#6c6c70;--act:#8fae00;--simbg:#ebebef}
 *,*::before,*::after{box-sizing:inherit}
 html,body{margin:0;background:#fff;color:var(--fg);font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,Roboto,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
 main{min-height:100vh;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 160px}
@@ -50,14 +52,15 @@ p{margin:0 0 14px;color:var(--mut);font-size:14px}
 video.hdr{object-fit:fill}
 .vd.rim{-webkit-mask:url(hdr/rim_mask.png) 0 0/100% 100% no-repeat;mask:url(hdr/rim_mask.png) 0 0/100% 100% no-repeat}
 .vd.prs{-webkit-mask:url(hdr/press_mask.png) 0 0/100% 100% no-repeat;mask:url(hdr/press_mask.png) 0 0/100% 100% no-repeat}
-body.u-av .av,body.u-vd .vd,body.u-gm .gm{display:block}
+body.u-av .av,body.u-vd .vd,body.u-gm .gm,body.u-sim .sim{display:block}
+body.u-sim .bar path{fill:var(--simbg)}
 /* debug: ?bg=888 page colour, ?nobar hides the white bar (to see each HDR layer by itself) */
 body.nobar .bar,body.nobar .cap{visibility:hidden}
 </style></head><body>
 <main>
 <h1>Светлое меню с HDR-обводкой</h1>
 <p>Пример: форма меню и пунктов как на сайте, фон белый. Белая обводка меню светится ярче белого фона (HDR) — там же и той же толщины, что в тёмной теме. При нажатии на меню светится всё меню.</p>
-<div class="sw" id="sw"><button data-m="auto">Авто</button><button data-m="av">Картинка</button><button data-m="gm">Ultra HDR</button><button data-m="vd">Видео</button><button data-m="off">Без HDR</button></div>
+<div class="sw" id="sw"><button data-m="auto">Авто</button><button data-m="av">Картинка</button><button data-m="gm">Ultra HDR</button><button data-m="vd">Видео</button><button data-m="sim">Имитация</button><button data-m="off">Без HDR</button></div>
 <div id="st"></div>
 </main>
 <div class="dock" id="dock">
@@ -67,6 +70,8 @@ body.nobar .bar,body.nobar .cap{visibility:hidden}
   <img class="hdr gm prs" data-src="hdr/press_bar.jpg" alt="" aria-hidden="true">
   <svg class="cap" id="cap" viewBox="0 0 99.55 54" aria-hidden="true"><path id="cp"/></svg>
   <div class="tabs" id="tabs" role="tablist" aria-label="Меню разделов"></div>
+  <img class="hdr sim rim" data-src="hdr/rim_white.png" alt="" aria-hidden="true">
+  <img class="hdr sim prs" data-src="hdr/press_white.png" alt="" aria-hidden="true">
   <img class="hdr av rim" data-src="hdr/rim.avif" alt="" aria-hidden="true">
   <img class="hdr av prs" data-src="hdr/press.avif" alt="" aria-hidden="true">
   <video class="hdr vd rim" data-src="hdr/white_pq.mp4" muted playsinline webkit-playsinline loop autoplay preload="none" aria-hidden="true"></video>
@@ -127,10 +132,11 @@ fit();addEventListener('resize',fit);
 var ua=navigator.userAgent,IOS=/iP(hone|od|ad)/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),APPLE=IOS||(/Macintosh/.test(ua)&&/AppleWebKit/.test(ua)&&!/Chrome|Chromium|Edg|OPR|YaBrowser|Firefox/.test(ua)),
  OTHER=/CriOS|FxiOS|EdgiOS|YaBrowser|YaSearchBrowser|OPiOS|OPT\/|GSA\/|DuckDuckGo|Instagram|FBAN|FBAV|Line\//.test(ua)||!/Safari\//.test(ua),
  SAFARI=APPLE&&!OTHER;
-function pick(){if(SAFARI)return ['av'];       /* Safari: HDR AVIF works (checked on iPhone, iOS 27) */
+function pick(){if(!mm('(dynamic-range: high)'))return ['sim']; /* no HDR screen: imitation */
+ if(SAFARI)return ['av'];       /* Safari: HDR AVIF works (checked on iPhone, iOS 27) */
  if(IOS)return ['av','vd'];                       /* Chrome/Yandex/others on iPhone: same engine, HDR pictures may be off there - add HDR video */
  return ['gm']}                                   /* Android and computers: Ultra HDR (gain map), the format of Chrome/Android */
-var LBL={av:'картинка AVIF',vd:'видео',gm:'Ultra HDR'};
+var LBL={av:'картинка AVIF',vd:'видео',gm:'Ultra HDR',sim:'имитация свечения'};
 function load(u){[].forEach.call(document.querySelectorAll('.'+u),function(e){if(!e.getAttribute('src')&&e.getAttribute('data-src')){e.setAttribute('src',e.getAttribute('data-src'));if(e.tagName==='VIDEO'){e.preload='auto';e.load()}}
  if(e.tagName==='VIDEO'){var p=e.play();if(p&&p.catch)p.catch(function(){})}})}
 var sw=$('sw'),st=$('st'),cur='auto';
@@ -152,13 +158,14 @@ var DEV='',AV=0;(function(){var m=/Android (\d+)/.exec(ua),c=/(YaBrowser|Samsung
   DEV=(v.model?v.model+' · ':'')+(d.platform==='Android'?'Android '+(AV||'?'):d.platform)+(br?' · '+br.brand.replace('Google ','').replace('YaBrowser','Яндекс')+' '+parseInt(br.version,10):'');status(LAST)}).catch(function(){})})();
 var LAST=[];
 function status(use){LAST=use;var hdr=mm('(dynamic-range: high)'),why='';
- if(!hdr&&mm('(dynamic-range: standard)'))why='экран без HDR — свечения не будет';
+ if(!hdr&&mm('(dynamic-range: standard)'))why=use.indexOf('sim')>=0?'экран без HDR — свечение изображено':'экран без HDR — свечения не будет';
  else if(AV&&AV<14&&use.indexOf('gm')>=0)why='для HDR-картинок в Chrome нужен Android 14 или новее';
  st.textContent='Экран HDR: '+(hdr?'да':mm('(dynamic-range: standard)')?'нет':'неизвестно')+' · сейчас: '+(use.length?use.map(function(u){return LBL[u]}).join(' + '):'без HDR')+
   (DEV?' · '+DEV:'')+(why?' · '+why:'')}
 sw.addEventListener('click',function(e){var b=e.target;while(b&&b!==sw&&!b.getAttribute('data-m'))b=b.parentNode;if(b&&b!==sw)mode(b.getAttribute('data-m'))});
+var sbg=(/[?&]sbg=([0-9a-f]{3,6})/i.exec(Q)||[])[1];if(sbg)document.documentElement.style.setProperty('--simbg','#'+sbg);
 var bg=(/[?&]bg=([0-9a-f]{3,6})/i.exec(Q)||[])[1];if(bg)document.documentElement.style.background=body.style.background='#'+bg;
-var m0=(/[?&]m=(auto|av|vd|gm|off)/.exec(Q)||[])[1]||'auto';if(!APPLE&&(m0==='av'||m0==='vd'))m0='auto';
+var m0=(/[?&]m=(auto|av|vd|gm|sim|off)/.exec(Q)||[])[1]||'auto';if(!APPLE&&(m0==='av'||m0==='vd'))m0='auto';
 mode(m0);
 })();
 </script>
