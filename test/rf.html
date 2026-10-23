@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Отражение фона</title>
+<style>
+/* Checking aid: does -webkit-box-reflect copy what a backdrop-filter element shows (its backdrop) to another place?
+   A red band lies at 400..430 px; a backdrop element E covers 380..440 px; its reflection goes below it.
+   ?v=1  E: backdrop-filter brightness(1.001), reflect below 40px
+   ?v=2  E: backdrop-filter blur(6px), reflect below 40px
+   ?v=3  as 1, E is hidden by its own mask (is the reflection hidden too?) */
+html,body{margin:0;background:#000;height:3000px}
+.band{position:absolute;left:0;right:0;top:400px;height:30px;background:#f33}
+.e{position:fixed;left:40px;width:300px;top:380px;height:60px;pointer-events:none}
+</style></head><body>
+<div class="band"></div>
+<div class="e" id="e"></div>
+<script>
+var v=(/[?&]v=(\d)/.exec(location.search)||[])[1]||'1',e=document.getElementById('e');
+e.style.webkitBackdropFilter=e.style.backdropFilter=v==='2'?'blur(6px)':'brightness(1.001)';
+e.style.webkitBoxReflect='below 40px';
+if(v==='3'){e.style.webkitMaskImage='linear-gradient(transparent,transparent)'}
+</script>
+</body></html>
