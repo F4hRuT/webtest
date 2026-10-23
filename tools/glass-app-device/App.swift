@@ -11,6 +11,18 @@ final class Scene: UIViewController {
     var anim: [String: Any] = [:]
     var oy: CGFloat = 0
     var useScroll = true
+    /* step code: 14 squares (white = 1) between two red marks at 10..106 x 100..106 pt — tells which sweep step a screenshot shows */
+    let code = UIView()
+    var codeOn = false
+    func setCode(_ k: Int) {
+        code.subviews.forEach { $0.removeFromSuperview() }
+        code.isHidden = !codeOn
+        for b in 0..<16 {
+            let v = UIView(frame: CGRect(x: CGFloat(b) * 6, y: 0, width: 6, height: 6))
+            if b == 0 || b == 15 { v.backgroundColor = .red } else { v.backgroundColor = ((k >> (b - 1)) & 1) == 1 ? .white : UIColor(white: 0.15, alpha: 1) }
+            code.addSubview(v)
+        }
+    }
     let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
 
     init(_ t: String, _ i: String) { super.init(nibName: nil, bundle: nil); tabBarItem = UITabBarItem(title: t, image: UIImage(systemName: i), tag: 0) }
@@ -24,6 +36,7 @@ final class Scene: UIViewController {
         scroll.alwaysBounceVertical = true
         plain.frame = view.bounds; plain.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(plain); view.addSubview(scroll)
+        code.frame = CGRect(x: 10, y: 100, width: 96, height: 6); view.addSubview(code); setCode(0)
         Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in self?.poll() }
     }
 
@@ -101,7 +114,9 @@ final class Scene: UIViewController {
                 if show, let im = it.image { it.image = im.withRenderingMode(.alwaysTemplate) }
             }
         }
+        codeOn = (j["code"] as? Bool) ?? false
         oy = CGFloat(j["oy"] as? Double ?? 0)
+        setCode(0)
         setY(oy)
         anim = j["anim"] as? [String: Any] ?? [:]
         link?.invalidate(); link = nil
@@ -129,7 +144,7 @@ final class Scene: UIViewController {
         if let steps = anim["step"] as? Double { // jump by steps: change offset every `every` seconds
             let every = anim["every"] as? Double ?? 0.5
             let k = min(floor(t / every), floor(dur / every))
-            setY(oy + CGFloat(k * steps)); if t > dur { link?.invalidate(); link = nil }; return
+            setY(oy + CGFloat(k * steps)); setCode(Int(k)); if t > dur { link?.invalidate(); link = nil }; return
         }
         setY(oy + vy * CGFloat(min(t, dur)))
         if t > dur { link?.invalidate(); link = nil }
@@ -147,7 +162,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options: UIScene.ConnectionOptions) {
         guard let ws = scene as? UIWindowScene else { return }
         let tb = UITabBarController()
-        tb.viewControllers = [Scene("Один","circle"), Scene("Два","star"), Scene("Три","square"), Scene("Четыре","person")]
+        tb.viewControllers = [Scene("Главная","house"), Scene("Тариф","chart.bar"), Scene("Расходы","wallet.bifold"), Scene("Поддержка","ellipsis.message")]
         tb.tabBarMinimizeBehavior = .never
         let w = UIWindow(windowScene: ws); w.overrideUserInterfaceStyle = .dark; w.rootViewController = tb; w.makeKeyAndVisible(); window = w
     }
