@@ -314,273 +314,97 @@ setTimeout(intro,2000);
 try{dbg()}catch(_){}
 [400,1200,2500].forEach(function(t){setTimeout(function(){if(!raf)recomp()},t)});
 window.ITB={gls:function(){return GLS},set:function(i){if(GLS&&GLS.screen)GLS.screen(i);if(i===sel)return;setSel(i);if(BASIC)return;startTap(i);an.rel=0;go()}};
-/* ---------- liquid glass v99 (iOS 27 tab bar, «Tinted», measured on a real iOS tab bar: tools/glass-app, CLAUDE.md).
-   On a phone Safari tells scripts the scroll position only ~10 times a second while the page scrolls, so the glass can
-   not be drawn by a script every frame. Here the glass picture is computed for the WHOLE page in advance (blur, brightness
-   curve, colour like iOS), once per screen and change, and Safari itself moves it with the page (CSS scroll-driven
-   animation runs on Safari's scrolling thread: page and glass move in the same frame even when scripts are busy).
-   Everything bar-related is static compositor layers on top: refraction bands (scaled copies of the glass picture near
-   the edge), the per-pixel iOS rim (multiply / plus-lighter / plus-darker / saturate), the capsule (backdrop-filter). ---------- */
+/* ---------- liquid glass v106 (iOS 27 tab bar, «Tinted», measured on a real iOS tab bar: tools/glass-app, CLAUDE.md).
+   The glass is made by Safari itself from what is on screen under the bar (backdrop-filter), at the moment of drawing — like
+   the iOS glass. Nothing is computed in advance and nothing has to follow the scroll, so the glass can not lag behind the
+   page or drift from it. Before v106 a precomputed picture of the whole page was moved by a CSS scroll-driven animation:
+   on the iPhone Safari moved it ~35 pt off the page while a finger scrolled and after loading (frame-by-frame analysis of
+   the recording 23.10.2026), which was the "colour of what already passed" and the jumps.
+   Layers (none of them inside a group: a backdrop-filter inside a group with a mask or opacity sees only that group):
+   - the iOS window: each glass layer is a box 15 pt above the bar, 13.67 below and 15.67 at the sides (Safari samples the
+     backdrop only inside the box, like iOS) and shows only the bar (mask);
+   - blur: 75.5% gauss 13.26 pt + 24.5% gauss 25.7 pt (= 13.26 after 22 at 24.5%);
+   - tone curve of «Tinted» y = .125 + .5x - .2x^2 (x, y 0..1; within ±1 of the measured iOS table): multiply by
+     (.5 - .2x) made from the backdrop (invert, contrast .25, brightness .8), then + 32;
+   - colour: saturate 1.6 after the curve (iOS colour factor .65 - .00083 L; mean error 2-3 levels on the site colours);
+   - then the per-pixel iOS rim (multiply / plus-lighter / plus-darker / saturate) and the capsule (backdrop-filter). ---------- */
 GLS=(function(){
- var M={on:false,err:'',ver:0,st:{n:0,take:0,load:0,up:0},kick:function(){},snap:function(){},caps:function(){},screen:function(){},size:function(){}},
-  g,cv,P={},T={},F={},SN={},SNS={},curScr=0,cur=null,dirty={},dirtyAt=0,busy=false,again=0,st=0,touching=0,lastScroll=-1e4,
-  WIN=null,IMGS=[],GPG=[],LENS=[],CAP=null,geo={l:0,t:0,f:1},capKey='',
-  SDA=!!(window.CSS&&CSS.supports&&CSS.supports('animation-timeline','scroll()'));
- var MP=4,BWX=BW+2*MP,BHX=BH+2*MP,GAM=.932,GR=.5,SMAX=1.6;
- var LUT=[32.0,32.5,33.0,33.5,34.0,34.5,35.0,35.5,36.0,36.5,37.0,37.5,38.0,38.5,39.0,39.5,40.0,40.4,40.8,41.1,41.5,41.9,42.2,42.6,43.0,43.5,44.0,44.5,45.0,45.5,46.0,46.5,47.0,47.5,48.0,48.5,49.0,49.5,50.0,50.5,51.0,51.4,51.7,52.1,52.5,52.9,53.2,53.6,54.0,54.4,54.8,55.1,55.5,55.9,56.2,56.6,57.0,57.5,58.0,58.5,59.0,59.5,60.0,60.5,60.9,61.3,61.7,62.1,62.5,62.9,63.2,63.6,64.0,64.4,64.8,65.1,65.5,65.9,66.2,66.6,67.0,67.4,67.8,68.1,68.5,68.9,69.2,69.6,70.0,70.4,70.7,71.1,71.5,71.8,72.2,72.6,72.9,73.2,73.5,73.7,74.0,74.2,74.5,74.7,75.0,75.4,75.8,76.1,76.5,76.9,77.2,77.6,78.0,78.4,78.7,79.1,79.4,79.8,80.1,80.5,80.9,81.1,81.4,81.7,81.9,82.2,82.5,82.7,83.0,83.2,83.5,83.8,84.0,84.2,84.5,84.8,85.0,85.4,85.7,86.1,86.4,86.8,87.2,87.5,87.9,88.1,88.4,88.7,88.9,89.2,89.4,89.7,90.0,90.2,90.5,90.7,91.0,91.2,91.5,91.7,92.0,92.2,92.5,92.7,93.0,93.2,93.5,93.7,94.0,94.2,94.4,94.7,94.9,95.2,95.4,95.6,95.9,96.0,96.1,96.3,96.4,96.6,96.7,96.9,97.0,97.2,97.5,97.8,98.0,98.2,98.5,98.8,99.0,99.2,99.4,99.7,99.9,100.1,100.3,100.6,100.8,100.9,101.1,101.2,101.4,101.5,101.7,101.8,102.0,102.1,102.2,102.4,102.5,102.6,102.8,102.9,103.0,103.2,103.5,103.7,103.9,104.1,104.4,104.6,104.8,105.0,105.1,105.2,105.4,105.5,105.6,105.8,105.9,106.0,106.2,106.3,106.4,106.5,106.7,106.8,106.9,107.1,107.2,107.3,107.4,107.5,107.7,107.8,107.9,107.9,107.9,107.9,108.0,108.0,108.0,108.0];
- var KW=[0.053062,0.052525,0.050948,0.048434,0.045138,0.041256,0.037001,0.032589,0.028214,0.024041,0.020192,0.016750,0.013753,0.011209,0.009093,0.007366,0.005977,0.004871,0.003995,0.003301,0.002749,0.002306,0.001945,0.001647,0.001398,0.001186,0.001006,0.000851,0.000717,0.000601,0.000502,0.000417,0.000344,0.000283,0.000231,0.000187,0.000151,0.000121,0.000097,0.000077];
+ var M={on:false,err:'',ver:0,kick:function(){},snap:function(){},caps:function(){},screen:function(){},size:function(){}},
+  WIN=null,CAP=null,capKey='';
+ var MP=4,BWX=BW+2*MP,BHX=BH+2*MP,SMAX=1.6,CAPC=40;
+ /* iOS window around the bar (pt) and the glass tone */
+ var WT=15,WB=13.67,WS=15.67,BL1=22,BL1O=.245,BL2=13.26,GSAT=+((/[?&]gsat=([\d.]+)/.exec(location.search)||[])[1]||1.4);
  var RIM='data:image/png;base64,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';
- /* refraction: iOS samples the glass shifted along the edge normal (table D in CLAUDE.md). Here: copies of the glass picture
-    scaled about the bar centre line (straight part) or the cap centre (ends), shown in bands by distance t from the edge (pt):
-    [t0, t1, scale]; scale < 1 shows content from outside the bar (rim glow), > 1 magnifies (lens near the inner edge). */
- /* first three bands = the three outer device-pixel rows of iOS (sample 8.6 pt outside, 3.3 pt outside, 1 pt inside: table DT) */
- var BANDS=[[0,1/3,.779],[1/3,2/3,.8905],[2/3,1,1.0084],[1,5,1.059],[5,10,1.035],[10,20,1.015]],CAPC=40;
- function FEo(b){return b<=1.01?.12:.35}
- var VS='attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
- var PR='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 v;';
- var FD=PR+'uniform sampler2D S;uniform vec2 Z,D;uniform float G;void main(){vec2 u=v*Z;'+
-  'vec3 c=.25*(texture2D(S,u+vec2(-D.x,-D.y)).rgb+texture2D(S,u+vec2(D.x,-D.y)).rgb+texture2D(S,u+vec2(-D.x,D.y)).rgb+texture2D(S,u+vec2(D.x,D.y)).rgb);gl_FragColor=vec4(pow(c,vec3(G)),1.);}';
- var FB=PR+'uniform sampler2D T;uniform vec2 D;uniform vec4 CL;uniform float W['+KW.length+'];vec4 S(vec2 p){return texture2D(T,clamp(p,CL.xy,CL.zw));}'+
-  'void main(){vec4 c=W[0]*S(v);for(int i=1;i<'+KW.length+';i++){float f=float(i);c+=W[i]*(S(v+D*f)+S(v-D*f));}gl_FragColor=c;}';
- var TONE='const vec3 W7=vec3(.2126,.7152,.0722);uniform sampler2D L;uniform float G;vec3 tone(vec3 z){vec3 c=pow(max(z,vec3(0.)),vec3(1./G))*255.;float l=dot(c,W7);'+
-  'float gv=texture2D(L,vec2((min(l,255.)+.5)/256.,.5)).a*255.;return gv+clamp(.6543-.000833*l,.4,.7)*(c-l);}';
- var FG=PR+'uniform sampler2D T;'+TONE+'void main(){gl_FragColor=vec4(clamp(tone(texture2D(T,v).rgb),0.,255.)/255.,1.);}';
- /* iOS sees only a window around the bar (15 pt above, 13.67 below, 15.67 to the sides, in 8 px cells) and repeats its edge
-    cell outward. The page-wide picture cannot do that while Safari scrolls it, so the difference at the top and bottom edge
-    is two pictures per screen (what to add, what to take away): rows = position of the window edge on the page, value = change of the glass if the
-    edge cell (E) replaced what lies beyond the window (A), at the largest weight WM. On screen it is stretched from the
-    window edge over the bar and weighted per row. */
- var NA=40,FC=PR+'uniform sampler2D T,C;uniform vec2 E2;uniform float DIR,PY,SO,WM,AS,EG,SG,AW['+NA+'];'+TONE+
-  'void main(){vec3 e=.5*(texture2D(T,v+vec2(0.,DIR*E2.x*PY)).rgb+texture2D(T,v+vec2(0.,DIR*E2.y*PY)).rgb),a=vec3(0.);'+
-  'for(int i=0;i<'+NA+';i++){a+=AW[i]*texture2D(T,v-vec2(0.,DIR*(float(i)+.5)*AS*PY)).rgb;}'+
-  'vec3 u=texture2D(C,v+vec2(0.,DIR*SO*PY)).rgb;vec3 d=EG*4.*(tone(u+.25*WM*(e-a))-tone(u));vec3 o=SG>0.?clamp(d,0.,255.):255.-clamp(-d,0.,255.);gl_FragColor=vec4(o/255.,1.);}';
- function sh(t,s){var o=g.createShader(t);g.shaderSource(o,s);g.compileShader(o);if(!g.getShaderParameter(o,g.COMPILE_STATUS))throw g.getShaderInfoLog(o);return o}
- function prog(fs){var p=g.createProgram();g.attachShader(p,sh(g.VERTEX_SHADER,VS));g.attachShader(p,sh(g.FRAGMENT_SHADER,fs));g.bindAttribLocation(p,0,'p');g.linkProgram(p);if(!g.getProgramParameter(p,g.LINK_STATUS))throw g.getProgramInfoLog(p);p.u={};return p}
- function U(p,n){return p.u[n]||(p.u[n]=g.getUniformLocation(p,n))}
- function tx(w,h){var t=g.createTexture();g.bindTexture(g.TEXTURE_2D,t);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);
-  g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);if(w)g.texImage2D(g.TEXTURE_2D,0,g.RGBA,w,h,0,g.RGBA,g.UNSIGNED_BYTE,null);return t}
- function fbo(w,h){var t=tx(w,h),f=g.createFramebuffer();g.bindFramebuffer(g.FRAMEBUFFER,f);g.framebufferTexture2D(g.FRAMEBUFFER,g.COLOR_ATTACHMENT0,g.TEXTURE_2D,t,0);if(g.checkFramebufferStatus(g.FRAMEBUFFER)!==g.FRAMEBUFFER_COMPLETE)throw 'fbo';return {t:t,f:f,w:w,h:h}}
- function pass(p,o,w,h){g.useProgram(p);g.bindFramebuffer(g.FRAMEBUFFER,o?o.f:null);g.viewport(0,0,w,h);g.drawArrays(g.TRIANGLE_STRIP,0,4)}
  function init(){
-  if(BASIC||/[?&]itbglass=0/.test(location.search)||!window.Path2D||!window.Float32Array||!window.URL||!URL.createObjectURL)return false;
-  if(!(CSS.supports('-webkit-backdrop-filter','blur(1px)')||CSS.supports('backdrop-filter','blur(1px)'))||!CSS.supports('mix-blend-mode','plus-lighter'))return false;
-  cv=document.createElement('canvas');cv.width=cv.height=4;
-  g=cv.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false})||cv.getContext('experimental-webgl');
-  if(!g)return false;
-  P.d=prog(FD);P.b=prog(FB);P.g=prog(FG);P.c=prog(FC);
-  var vb=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,vb);g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),g.STATIC_DRAW);g.enableVertexAttribArray(0);g.vertexAttribPointer(0,2,g.FLOAT,false,0,0);
-  var i,a=new Uint8Array(256);T.l=tx(0,0);for(i=0;i<256;i++)a[i]=Math.round(LUT[i]);g.texImage2D(g.TEXTURE_2D,0,g.ALPHA,256,1,0,g.ALPHA,g.UNSIGNED_BYTE,a);
-  T.s=tx(0,0);M.max=g.getParameter(g.MAX_TEXTURE_SIZE);g.disable(g.BLEND);
-  cv.addEventListener('webglcontextlost',function(e){e.preventDefault();off()});return true}
- /* whole-page glass picture from the page picture (texture T.s, W x H CSS px): downsample to GR, blur, iOS brightness/colour */
- /* window of iOS around the bar in page px (set by take() from the bar position) */
- var WINP={l:0,r:1e5,f:1};
- function erfc(x){var z=Math.abs(x),t=1/(1+.5*z),r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196+t*(.09678418+t*(-.18628806+t*(.27886807+t*(-1.13520398+t*(1.48851587+t*(-.82215223+t*.17087277)))))))));return x>=0?r:2-r}
- function wTail(z){return .755*.5*erfc(z/13.26/Math.SQRT2)+.245*.5*erfc(z/25.7/Math.SQRT2)}   /* blur weight beyond z pt */
- /* EGAIN: measured iOS answer to a white edge cell is ~1.5x what the blur model gives (line tests 22.10.2026) */
- var WT0=15,WB0=BH+13.67,WMX=.37,EGAIN=+((/[?&]eg=([\d.]+)/.exec(location.search)||[])[1]||1.5);
- function glassOf(W,H,cb){var mx=M.max||4096,s=Math.min(GR,mx/H),sy=Math.min(1,mx/H),OW=Math.max(1,Math.ceil(W*s)),OH=Math.max(1,Math.ceil(H*s)),OY=Math.max(1,Math.ceil(H*sy)),OC=Math.max(1,Math.ceil(W*s/2)),
-   A=fbo(OW,OY),B=fbo(OW,OY),C=fbo(OW,OY),R=fbo(OW,OH),Q=fbo(OC,OY),i,outs=[],f=WINP.f;
-  /* the picture is worked at 2 pt across and 1 pt down (window edges need the finer rows); base glass 2 pt, edge pictures 4 x 1 pt */
-  try{g.activeTexture(g.TEXTURE0);
-   g.useProgram(P.d);g.bindTexture(g.TEXTURE_2D,T.s);g.uniform1i(U(P.d,'S'),0);g.uniform2f(U(P.d,'Z'),OW/s/W,OY/sy/H);g.uniform2f(U(P.d,'D'),.5/W,.5/H);g.uniform1f(U(P.d,'G'),GAM);pass(P.d,A,OW,OY);
-   g.useProgram(P.b);g.uniform1fv(U(P.b,'W'),KW);g.uniform1i(U(P.b,'T'),0);
-   /* across: only the window columns (edge column repeated, as iOS) */
-   g.bindTexture(g.TEXTURE_2D,A.t);g.uniform4f(U(P.b,'CL'),Math.max(0,WINP.l/W),0,Math.min(1,WINP.r/W),1);g.uniform2f(U(P.b,'D'),1/OW,0);pass(P.b,B,OW,OY);
-   g.bindTexture(g.TEXTURE_2D,B.t);g.uniform4f(U(P.b,'CL'),0,0,1,1);g.uniform2f(U(P.b,'D'),0,2*sy/OY);pass(P.b,C,OW,OY);
-   var rd=function(F,w,h){var px=new Uint8Array(w*h*4);g.bindFramebuffer(g.FRAMEBUFFER,F.f);g.readPixels(0,0,w,h,g.RGBA,g.UNSIGNED_BYTE,px);g.bindFramebuffer(g.FRAMEBUFFER,null);outs.push([px,w,h])};
-   g.useProgram(P.g);g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,T.l);g.uniform1i(U(P.g,'L'),1);g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,C.t);g.uniform1i(U(P.g,'T'),0);g.uniform1f(U(P.g,'G'),GAM);pass(P.g,R,OW,OH);rd(R,OW,OH);
-   /* beyond-the-edge average A: 2 pt apart, weights = blur weight of the row 3 pt outside the bar (12 pt from the edge) */
-   var tp=sy*f,dz=2,aw=[],sum=0;for(i=0;i<NA;i++){var z=(i+.5)*dz;aw.push(wTail(12+z-dz/2)-wTail(12+z+dz/2));sum+=aw[i]}for(i=0;i<NA;i++)aw[i]/=sum;
-   g.useProgram(P.c);g.activeTexture(g.TEXTURE2);g.bindTexture(g.TEXTURE_2D,C.t);g.uniform1i(U(P.c,'C'),2);g.activeTexture(g.TEXTURE1);g.bindTexture(g.TEXTURE_2D,T.l);g.uniform1i(U(P.c,'L'),1);
-   g.activeTexture(g.TEXTURE0);g.bindTexture(g.TEXTURE_2D,B.t);g.uniform1i(U(P.c,'T'),0);g.uniform1f(U(P.c,'G'),GAM);g.uniform1fv(U(P.c,'AW'),aw);g.uniform1f(U(P.c,'PY'),1/OY);g.uniform1f(U(P.c,'WM'),WMX);
-   /* E: the edge cell (2.667 pt) sampled at 1/4 and 3/4 of it; offsets in texels (tp per pt) */
-   g.uniform2f(U(P.c,'E2'),.6667*tp,2*tp);g.uniform1f(U(P.c,'AS'),dz*tp);g.uniform1f(U(P.c,'EG'),EGAIN);
-   /* per edge two pictures: what to add (plus-lighter) and what to take away (plus-darker, white = nothing); where there is
-      nothing to change both are exact no-ops (the former +64/-64 pair left ±1 rounding speckles on the phone) */
-   [[1,WT0+3],[-1,WB0-BH+3]].forEach(function(q){g.uniform1f(U(P.c,'DIR'),q[0]);g.uniform1f(U(P.c,'SO'),q[1]*tp);
-    g.uniform1f(U(P.c,'SG'),1);pass(P.c,Q,OC,OY);rd(Q,OC,OY);g.uniform1f(U(P.c,'SG'),-1);pass(P.c,Q,OC,OY);rd(Q,OC,OY)})}
-  finally{[A,B,C,R,Q].forEach(function(o){g.deleteFramebuffer(o.f);g.deleteTexture(o.t)})}
-  var urls=[],k=0;
-  /* PNG packing off the page thread when the browser can (it took ~100 ms per picture on the page thread) */
-  if(enc()){var left=outs.length;outs.forEach(function(o,n){encW(o[0],o[1],o[2],function(u){urls[n]=u;if(--left===0)cb(urls,true)})});return}
-  (function nx(){if(k>=outs.length){cb(urls,!!document.createElement('canvas').toBlob);return}var o=outs[k++],c=document.createElement('canvas');c.width=o[1];c.height=o[2];var x=c.getContext('2d'),id=x.createImageData(o[1],o[2]);id.data.set(o[0]);x.putImageData(id,0,0);
-   if(c.toBlob)c.toBlob(function(b){urls.push(b?URL.createObjectURL(b):null);nx()},'image/png');else{urls.push(c.toDataURL('image/png'));nx()}})()}
- var EW=null,EWn=0,EWcb={},EWok=null;
- function enc(){if(EWok!==null)return EWok;EWok=false;try{if(!window.Worker||!window.OffscreenCanvas||!OffscreenCanvas.prototype.convertToBlob)return false;
-   var src='onmessage=function(e){var d=e.data;try{var c=new OffscreenCanvas(d.w,d.h),x=c.getContext("2d");x.putImageData(new ImageData(new Uint8ClampedArray(d.b),d.w,d.h),0,0);c.convertToBlob({type:"image/png"}).then(function(b){postMessage({id:d.id,b:b})},function(){postMessage({id:d.id,b:null})})}catch(err){postMessage({id:d.id,b:null})}}';
-   EW=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));EW.onmessage=function(e){var f=EWcb[e.data.id];delete EWcb[e.data.id];if(f)f(e.data.b?URL.createObjectURL(e.data.b):null)};EWok=true}catch(_){EWok=false}return EWok}
- function encW(px,w,h,f){var id=++EWn;EWcb[id]=f;EW.postMessage({id:id,w:w,h:h,b:px.buffer},[px.buffer])}
- /* static layers from the iOS per-pixel rim map (RIM: out = A + Kl*L + Kc*(G-L) + beta*page) and the edge geometry */
- function png(w,h,fill){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d'),id=x.createImageData(w,h);fill(id.data);x.putImageData(id,0,0);return c.toDataURL('image/png')}
- function edt1(f,n,o,v,z){var k=0,q,s;v[0]=0;z[0]=-1e20;z[1]=1e20;
-  for(q=1;q<n;q++){s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]);while(s<=z[k]){k--;s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k])}k++;v[k]=q;z[k]=s;z[k+1]=1e20}
-  for(k=0,q=0;q<n;q++){while(z[k+1]<q)k++;o[q]=(q-v[k])*(q-v[k])+f[v[k]]}}
- function layers(map,cb){var W3=BWX*3,H3=BHX*3,N=W3*H3,i,x,y;
-  /* distance to the bar outline (pt) for refraction bands */
-  var c=document.createElement('canvas');c.width=W3;c.height=H3;var cx=c.getContext('2d');cx.setTransform(3,0,0,3,MP*3,MP*3);cx.fillStyle='#fff';cx.fill(new Path2D(bpath(BW,BH,0,0)));
-  var cov=cx.getImageData(0,0,W3,H3).data,P2=2,W2=W3+2*P2,H2=H3+2*P2,f=new Float64Array(W2*H2),L=Math.max(W2,H2),o=new Float64Array(L),fi=new Float64Array(L),vv=new Int32Array(L),z=new Float64Array(L+1),T3=new Float32Array(N);
-  for(y=0;y<H3;y++)for(x=0;x<W3;x++)if(cov[(y*W3+x)*4+3]>=128)f[(y+P2)*W2+x+P2]=1e20;
-  for(x=0;x<W2;x++){for(y=0;y<H2;y++)fi[y]=f[y*W2+x];edt1(fi,H2,o,vv,z);for(y=0;y<H2;y++)f[y*W2+x]=o[y]}
-  for(y=0;y<H2;y++){for(x=0;x<W2;x++)fi[x]=f[y*W2+x];edt1(fi,W2,o,vv,z);for(x=0;x<W2;x++)f[y*W2+x]=o[x]}
-  for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var d=Math.sqrt(f[(y+P2)*W2+x+P2]);T3[i]=d>0?(d-.5-(1-cov[i*4+3]/255))/3:0}
-  function sm(a,b,t){t=Math.min(1,Math.max(0,(t-a)/(b-a)));return t*t*(3-2*t)}
-  var out={};
+  if(BASIC||/[?&]itbglass=0/.test(location.search)||!window.Path2D||!window.CSS||!CSS.supports)return false;
+  if(!(CSS.supports('-webkit-backdrop-filter','blur(1px)')||CSS.supports('backdrop-filter','blur(1px)')))return false;
+  return CSS.supports('mix-blend-mode','plus-lighter')&&CSS.supports('mix-blend-mode','multiply')}
+ function png(w,h,fill){var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d'),im=x.createImageData(w,h);fill(im.data);x.putImageData(im,0,0);return c.toDataURL('image/png')}
+ /* rim layers from the iOS map: out = A + Kl*G + Kc*(G - L) + beta*page; mask = 1 - beta (0 inside the bar, ~1 outside) */
+ function layers(map,cb){var W3=BWX*3,H3=BHX*3,N=W3*H3,i,out={};
   out.mask=png(W3,H3,function(d){for(i=0;i<N;i++){d[i*4+3]=Math.round(Math.min(1,Math.max(0,1-map.b[i]))*255)}});
   out.mul=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?Math.min(1,Math.max(0,map.kl[i]/al)):1;d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(v*255);d[i*4+3]=255}});
-  out.add=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?map.a[i]/al:0;v=Math.max(0,Math.min(255,v));d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(v);d[i*4+3]=255}});
+  /* on the half-covered edge pixels there is no glass layer (see gmask): their Kl*G is added here with G of the glass over a
+     dark page (32), the usual case on this dark site */
+  out.add=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?(map.a[i]+(al<.97?map.kl[i]*32:0))/al:0;v=Math.max(0,Math.min(255,v));d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(v);d[i*4+3]=255}});
   out.sub=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?-map.a[i]/al:0;v=Math.max(0,Math.min(255,v));d[i*4]=d[i*4+1]=d[i*4+2]=Math.round(255-v);d[i*4+3]=255}});
-  /* window-edge weights per pixel: blur weight beyond the edge for the row the glass is sampled from (refraction DT) */
-  var DT=[25,85,133,153,151,150,149,148,147,146,145,145,143,142,142,141,140,140,139,138,137,137,136,135,134,134,134,133,132,132,132,131,131,131,130,130,131,130,130,130,130,129,129,129,128,128,128,127,128,128,128,128,128,129,129,128,128,128,128,128,128,128,128,128],
-   AT=new Float32Array(N),AB=new Float32Array(N);
-  for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var bu=y/3-MP,bx2=x/3-MP,tt=T3[i],us=bu;
-   if(cov[i*4+3]>0){var tp=Math.round(tt*3),dd=tp<DT.length?(DT[tp]-128)/12:0,cx2=bx2<31?31:(bx2>BW-31?BW-31:bx2),ny=bx2<31||bx2>BW-31?(BH/2-bu)/Math.max(.5,Math.hypot(cx2-bx2,BH/2-bu)):(bu<BH/2?1:-1);us=bu+dd*ny}
-   AT[i]=Math.min(1,wTail(us+WT0)/WMX);AB[i]=Math.min(1,wTail(WB0-us)/WMX)}
-  out.wt=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=Math.round(AT[i]*255)});
-  out.wb=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=Math.round(AB[i]*255)});
+  /* the menu is its own group (fixed dock): outside the bar the group is see-through, and a neutral (white) multiply or
+     plus-darker pixel would show there as light (also on the half-covered edge pixels). Their masks are therefore 1 only where
+     the menu is opaque and they change something */
+  /* glass layers: only where the menu is opaque (a curve layer on a half-covered pixel shows its grey as light); the
+     smoothed edge comes from the plus-lighter layer (A), which adds light without that problem, over the page */
+  out.gmask=png(W3,H3,function(d){for(i=0;i<N;i++)d[i*4+3]=1-map.b[i]>=.97?255:0});
+  out.mmask=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?map.kl[i]/al:1;d[i*4+3]=v<.995&&al>=.97?255:0}});
+  out.smask=png(W3,H3,function(d){for(i=0;i<N;i++){var al=1-map.b[i],v=al>.02?-map.a[i]/al:0;d[i*4+3]=v>=.5&&al>=.97?255:0}});
   out.sat=png(W3,H3,function(d){for(i=0;i<N;i++){var s=map.kl[i]>.05?map.kc[i]/map.kl[i]:1,w=Math.min(1,Math.max(0,(s-1)/(SMAX-1)));d[i*4+3]=Math.round(w*255)}});
-  /* ends (l, r) and the straight part (s) blend over 26..36 pt: the s copy lies on top with a soft edge, no seam */
-  out.bands=BANDS.map(function(bd){var o={};['l','r','s'].forEach(function(rg){o[rg]=png(W3,H3,function(d){for(y=0;y<H3;y++)for(x=0;x<W3;x++){i=y*W3+x;var bx=x/3-MP,t=T3[i],
-     wl=1-sm(26,36,bx),wr=sm(BW-36,BW-26,bx),w=rg==='l'?(bx<36?1:0):(rg==='r'?(bx>BW-36?1:0):(1-wl)*(1-wr));if(w<=0)continue;
-     /* a band fades in at its outer edge and stays opaque until the next band (drawn over it) is fully in: no unrefracted
-        picture shows through between bands; only the last band fades out */
-     var f0=FEo(bd[0]),f1=FEo(bd[1]),last=bd===BANDS[BANDS.length-1],a=w*(bd[0]<=0?1:sm(bd[0]-f0,bd[0]+f0,t))*(last?1-sm(bd[1]-f1,bd[1]+f1,t):(t<bd[1]+f1?1:0));d[i*4+3]=Math.round(a*255)}})});return o});
   cb(out)}
- /* the iOS map, embedded as a PNG: left 142 columns + middle column (right side mirrored). v103: measurement noise smoothed
-    along the outline (outer 3 px rows kept exact; it showed as ±1 speckles/stripes on the phone) and calibrated to the real
-    iPhone (Fitness over black and over a gray button, 22.10.2026): outer rows +6/+5/+3 and Kl +.15/.10/.10, inside -1 */
  function rimMap(cb){var im=new Image();im.onload=function(){try{var c=document.createElement('canvas');c.width=im.width;c.height=im.height;var x=c.getContext('2d');x.drawImage(im,0,0);
    var d=x.getImageData(0,0,im.width,im.height).data,cw=im.width,rh=im.height/2,W3=BWX*3,N=W3*rh,m={a:new Float32Array(N),kl:new Float32Array(N),kc:new Float32Array(N),b:new Float32Array(N)},L=cw-1,X,y,sx,i,j;
    for(y=0;y<rh;y++)for(X=0;X<W3;X++){sx=X<L?X:(X>=W3-L?W3-1-X:L);i=(y*cw+sx)*4;j=y*W3+X;m.a[j]=d[i]-64;m.kl[j]=d[i+1]/200;m.kc[j]=d[i+2]/150;m.b[j]=d[((y+rh)*cw+sx)*4]/200-.1}
    cb(m)}catch(e){M.err='rim '+e;cb(null)}};im.onerror=function(){cb(null)};im.src=RIM}
  function el(tag,css,parent){var e=document.createElement(tag);e.style.cssText=css;if(parent)parent.appendChild(e);return e}
  function mskCss(url){return '-webkit-mask-image:url('+url+');mask-image:url('+url+');-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;'}
- /* ?glsoff=lens,edge,rim,sat,cap — switch layers off one by one (checking aid) */
+ /* ?glsoff=glass,rim,sat,cap — switch layers off one by one (checking aid) */
  var OFF=(/[?&]glsoff=([a-z,]+)/.exec(location.search)||[])[1]||'';
- function build(L){var ab='position:absolute;left:0;top:0;width:'+BWX+'px;height:'+BHX+'px;pointer-events:none;';
-  WIN=el('div',ab+'left:'+(-MP)+'px;top:'+(-MP)+'px;isolation:isolate;background:rgb(32,32,32);'+mskCss(L.mask));WIN.className='gwin';WIN.setAttribute('aria-hidden','true');
-  function glassLayer(parent,tf,kind){var gp=el('div','position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0',parent),host=gp,ln=null;
-   if(tf){ln=el('div','position:absolute;left:0;top:0;width:0;height:0',gp);ln._tf=tf;LENS.push(ln);host=ln}
-   var im=el('img','position:absolute;left:0;top:0;width:1px;height:1px;max-width:none',host);im.className='gimg';im.alt='';im.decoding='sync';im._k=kind||0;GPG.push(gp);IMGS.push(im)}
-  glassLayer(WIN,null);
-  if(OFF.indexOf('lens')<0)BANDS.forEach(function(bd,bi){['l','r','s'].forEach(function(rg){var b=el('div',ab+mskCss(L.bands[bi][rg]),WIN);glassLayer(b,[rg,bd[2]])})});
-  /* window edges of iOS: picture of the change at the edge, stretched from the edge line over the bar (scale 1:100 about it),
-     weighted per row by the mask; one picture adds (plus-lighter), the other takes away (plus-darker) */
-  if(OFF.indexOf('edge')<0&&CSS.supports('mix-blend-mode','plus-darker'))[['et',1,L.wt,'plus-lighter'],['et',2,L.wt,'plus-darker'],['eb',3,L.wb,'plus-lighter'],['eb',4,L.wb,'plus-darker']].forEach(function(q){
-   var b=el('div',ab+mskCss(q[2])+'mix-blend-mode:'+q[3],WIN);glassLayer(b,[q[0],100],q[1])});
+ function bf(f){return '-webkit-backdrop-filter:'+f+';backdrop-filter:'+f+';'}
+ function build(L){var ab='position:absolute;left:0;top:0;width:'+BWX+'px;height:'+BHX+'px;pointer-events:none;',mk=mskCss(L.mask);
+  WIN=el('div','position:absolute;left:'+(-MP)+'px;top:'+(-MP)+'px;width:'+BWX+'px;height:'+BHX+'px;pointer-events:none');WIN.className='gwin';WIN.setAttribute('aria-hidden','true');
+  /* glass: the iOS window as the box, the bar (iOS mask) as what is shown */
+  var gw='position:absolute;pointer-events:none;left:'+(MP-WS)+'px;top:'+(MP-WT)+'px;width:'+(BW+2*WS)+'px;height:'+(BH+WT+WB)+'px;'+
+   '-webkit-mask-image:url('+L.gmask+');mask-image:url('+L.gmask+');-webkit-mask-size:'+BWX+'px '+BHX+'px;mask-size:'+BWX+'px '+BHX+'px;'+
+   '-webkit-mask-position:'+(WS-MP)+'px '+(WT-MP)+'px;mask-position:'+(WS-MP)+'px '+(WT-MP)+'px;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;';
+  if(OFF.indexOf('glass')<0){el('div',gw+bf('blur('+BL1+'px)')+'opacity:'+BL1O,WIN);el('div',gw+bf('blur('+BL2+'px)'),WIN);
+   el('div',gw+bf('invert(1) contrast(.25) brightness(.8)')+'mix-blend-mode:multiply',WIN);
+   el('div',gw+'background:rgb(32,32,32);mix-blend-mode:plus-lighter',WIN);
+   el('div',gw+bf('saturate('+GSAT+')'),WIN)}
   /* order: x Kl, + A, - |A| (dark ring), then the colour gain last: no channel is cut at 0 or 255 before the end */
-  if(OFF.indexOf('rim')<0){el('div',ab+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
-  el('div',ab+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);}
-  if(OFF.indexOf('rim')<0&&CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+'background:url('+L.sub+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN);
-  if(OFF.indexOf('sat')<0)el('div',ab+'-webkit-backdrop-filter:saturate('+SMAX+');backdrop-filter:saturate('+SMAX+');'+mskCss(L.sat),WIN);
-  CAP=el('div','position:absolute;left:0;top:0;width:0;height:0;opacity:0;-webkit-backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2);backdrop-filter:brightness(.763) contrast(1.14) saturate(1.2)',WIN);
+  if(OFF.indexOf('rim')<0){if(OFF.indexOf('mul')<0)el('div',ab+mskCss(L.mmask)+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
+   if(OFF.indexOf('add')<0)el('div',ab+mk+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);
+   if(OFF.indexOf('sub')<0&&CSS.supports('mix-blend-mode','plus-darker'))el('div',ab+mskCss(L.smask)+'background:url('+L.sub+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-darker',WIN)}
+  if(OFF.indexOf('sat')<0)el('div',ab+bf('saturate('+SMAX+')')+mskCss(L.sat),WIN);
+  CAP=el('div','position:absolute;left:0;top:0;width:0;height:0;opacity:0;'+bf('brightness(.763) contrast(1.14) saturate(1.2)'),WIN);
+  if(OFF.indexOf('cap')>=0)CAP.style.display='none';
   /* capsule outline = path() of the canvas menu (iOS shape, not a plain stadium): end caps from its resting shape, scaled with
      the height, and a plain middle; the caps are flat to 0.01 pt at CAPC from the ends */
   var cs=CAP.style,sv=function(x0){return 'url("data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="'+CAPC+'" height="'+PH+'" viewBox="'+x0+' 0 '+CAPC+' '+PH+'"><path d="'+path(PW,PH,0,0)+'"/></svg>')+'")'};
   cs.webkitMaskImage=cs.maskImage=sv(0)+','+sv(PW-CAPC)+',linear-gradient(#000,#000)';cs.webkitMaskRepeat=cs.maskRepeat='no-repeat';
   $('glass').appendChild(WIN)}
- /* where the window is on screen and how the glass picture sits under it (viewport px); the scroll itself is Safari's */
- function place(){if(!WIN)return;var r=WIN.getBoundingClientRect(),f=r.width/BWX||1,i,v=window.visualViewport,dk=document.getElementById('dock'),gt=r.top,gl=r.left;
-  /* while Safari moves its toolbar the rects come shifted by the visual viewport offset for a moment (18 pt seen): take the
-     dock's own CSS top (layout, stable) when the page is not pinch-zoomed */
-  if(dk&&!dk.style.transform&&(!v||v.scale<1.01)){var dr=dk.getBoundingClientRect(),ct=parseFloat(getComputedStyle(dk).top);if(isFinite(ct))gt=ct+(r.top-dr.top);if(v)gl=r.left+v.offsetLeft}
-  geo={l:gl,t:gt,f:f};LG('place');
-  for(i=0;i<GPG.length;i++)GPG[i].style.transform='scale('+(1/f).toFixed(5)+')';
-  for(i=0;i<LENS.length;i++){var t=LENS[i]._tf,s=t[1],oy=(t[0]==='et'?MP-WT0:(t[0]==='eb'?MP+WB0:BH/2+MP))*f,ox=(t[0]==='l'?31+MP:(t[0]==='r'?BW-31+MP:0))*f;
-   LENS[i].style.transformOrigin=ox.toFixed(2)+'px '+oy.toFixed(2)+'px';LENS[i].style.transform=t[0]==='l'||t[0]==='r'?'scale('+s+')':'scale(1,'+s+')'}
-  if(cur)fit(cur)}
- function fit(e){for(var i=0;i<IMGS.length;i++){var s=IMGS[i].style;s.left=(-geo.l).toFixed(2)+'px';s.top=(e.y0-geo.t).toFixed(2)+'px';s.width=e.w+'px';s.height=e.h+'px'}}
- function show(e){if(!e||e===cur)return;var old=cur;cur=e;var us=(e.urls||[e.url]).filter(Boolean),left=us.length,go1=function(){if(--left===0)go()};
-  var go=function(){if(cur!==e)return;place();fit(e);LG('show',{y0:e.y0});for(var i=0;i<IMGS.length;i++)IMGS[i].src=e.urls[IMGS[i]._k]||e.url;restart();M.ver++;if(old&&old.blob&&!used(old))setTimeout(function(){if(!used(old))freeE(old)},1000)};
-  /* all pictures decoded first: the layers change in one frame */
-  us.forEach(function(u){var pre=new Image();pre.src=u;if(pre.decode)pre.decode().then(go1,go1);else{pre.onload=pre.onerror=go1}})}
- /* Safari keeps a scroll-driven animation that started before the picture was set frozen on its compositor: restart it */
- function restart(){if(!SDA)return;var i;for(i=0;i<IMGS.length;i++)IMGS[i].style.animation='none';void WIN.offsetWidth;for(i=0;i<IMGS.length;i++)IMGS[i].style.animation=''}
- function freeE(e){(e.urls||[e.url]).forEach(function(u){if(u)URL.revokeObjectURL(u)})}
- function used(e){if(e===cur)return true;for(var k in SN)if(SN[k]===e)return true;return false}
- /* page pictures: one per screen of #app (the 4 tabs), page CSS, animations stopped at their end state; other screens are
-    taken in advance while nothing happens; not while a finger is down or the page scrolls (it costs a moment on a phone),
-    but an outdated one is replaced at most 1.5 s later anyway. Card shapes (SVG backgrounds) -> their CSS colour + radius. */
- function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
- function liveScr(){var a=document.querySelector('#app .scr.on');return a?+a.getAttribute('data-scr')||0:0}
- function nScr(){var n=document.querySelectorAll('#app .scr').length;return n||1}
- M.screen=function(i){if(!M.on)return;curScr=i;if(SN[i])show(SN[i]);else{dirty[i]=1;dirtyAt=dirtyAt||performance.now();sched(0)}};
- function pick(){var now=performance.now(),idle=!touching&&now-lastScroll>400,i,n=nScr();curScr=liveScr();
-  if(!SN[curScr])return curScr;
-  if(dirty[curScr])return idle||now-dirtyAt>1500?curScr:-2;
-  if(!idle)return -1;
-  for(i=0;i<n;i++)if(!SN[i]||dirty[i])return i;return -1}
- function take(){st=0;if(!M.on)return;if(busy){again=1;return}var which=pick();if(which===-2){st=setTimeout(take,250);return}if(which<0)return;
-  var app=document.getElementById('app');if(!app)return;busy=true;var t0=performance.now(),live=which===liveScr();delete dirty[which];if(!Object.keys(dirty).length)dirtyAt=0;
-  try{var de=document.documentElement,W=de.clientWidth,ar=app.getBoundingClientRect(),y0=ar.top-de.getBoundingClientRect().top,H,_lg=LG('take',{art:ar.top}),
-   li=app.querySelectorAll('input,textarea,select'),cl=app.cloneNode(true),ci=cl.querySelectorAll('input,textarea,select'),i,css='',xs=new XMLSerializer();
-   for(i=0;i<li.length&&i<ci.length;i++){if(li[i].type==='checkbox'||li[i].type==='radio'){if(li[i].checked)ci[i].setAttribute('checked','');else ci[i].removeAttribute('checked')}else ci[i].setAttribute('value',li[i].value)}
-   var sc=cl.querySelectorAll('.scr');for(i=0;i<sc.length;i++){if((+sc[i].getAttribute('data-scr')||0)===which){if(!/(^|\s)on(\s|$)/.test(sc[i].className))sc[i].className+=' on';sc[i].style.removeProperty('--dx');if(!sc[i].getAttribute('style'))sc[i].removeAttribute('style')}else sc[i].parentNode.removeChild(sc[i])}
-   var bi=cl.querySelectorAll('[style*="url("]');for(i=0;i<bi.length;i++){var es=bi[i].style;es.backgroundImage='';es.backgroundSize='';es.backgroundRepeat='';if(es.backgroundColor==='transparent')es.backgroundColor=''}
-   if(live)H=Math.max(1,Math.ceil(ar.height));
-   else{var box=document.createElement('div');box.setAttribute('aria-hidden','true');box.style.cssText='position:absolute;left:-30000px;top:0;width:'+W+'px;visibility:hidden;pointer-events:none';
-    box.appendChild(cl);document.body.appendChild(box);H=Math.max(1,Math.ceil(cl.getBoundingClientRect().height));document.body.removeChild(box);box.removeChild(cl)}
-   /* black margin below the page: the window of iOS reaches ~14 pt below the bar, past the end of a short page or at the very
-      bottom; without rows there the edge pictures were empty while their -64 layer still darkened the menu */
-   H=Math.max(H+120,Math.ceil((window.innerHeight||700)*1.3));
-   var ss=document.querySelectorAll('style');for(i=0;i<ss.length;i++)if(ss[i].id!=='itb-css'&&ss[i].id!=='itb-css2')css+=ss[i].textContent;
-   /* sharper picture through a CSS scale inside: Safari does not scale foreignObject content by the SVG viewBox */
-   var sp=document.querySelector('body>svg'),s=Math.max(.2,Math.min(1,(M.max||4096)/W,(M.max||4096)/H)),PW=Math.floor(W*s),PH=Math.min(M.max||4096,Math.floor(H*s));s=PW/W;
-   css+='*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}html,body{margin:0;width:'+PW+'px;height:'+PH+'px;overflow:hidden;background:#000}body::before{display:none}';
-   var str='<svg xmlns="http://www.w3.org/2000/svg" width="'+PW+'" height="'+PH+'"><foreignObject x="0" y="0" width="'+PW+'" height="'+PH+'">'+
-    '<html xmlns="http://www.w3.org/1999/xhtml"><head><style>'+esc(css)+'</style></head><body class="'+esc(document.body.className)+'"><div style="position:relative;width:'+W+'px;height:'+H+'px;transform:scale('+s+');transform-origin:0 0">'+(sp?xs.serializeToString(sp):'')+xs.serializeToString(cl)+'</div></body></html></foreignObject></svg>';
-   /* same picture as last time (tab switch, a toggle set back, etc.): nothing to do — no work on the phone */
-   if(SNS[which]===str&&SN[which]){if(which===curScr)show(SN[which]);busy=false;M.st.skip=(M.st.skip||0)+1;done();return}SNS[which]=str;
-   var hasImg=!!cl.querySelector('img'),im=new Image();M.st.take=Math.round(performance.now()-t0);t0=performance.now();
-   var make=function(fin){var t1=performance.now();try{g.bindTexture(g.TEXTURE_2D,T.s);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,im);
-     if(WIN){var wr=WIN.getBoundingClientRect(),wf=wr.width/BWX||1;WINP={l:wr.left+(MP-15.67)*wf,r:wr.right-(MP-15.67)*wf,f:wf}}
-     glassOf(W,H,function(urls,blob){var url=urls&&urls[0];M.st.up=Math.round(performance.now()-t1);if(url&&/[?&]glsdump/.test(location.search)){(urls||[]).forEach(function(u,n){try{var q=new XMLHttpRequest();q.open('GET',u);q.responseType='blob';q.onload=function(){var z=new XMLHttpRequest();z.open('POST','/glassimg'+n+'?H='+H+'&y0='+y0);z.send(q.response)};q.send()}catch(_){}})}if(!url||!M.on){fin();return}var e={url:url,urls:urls,blob:blob,y0:y0,w:W,h:H},old=SN[which];LG('made',{y0:y0,which:which,H:H});SN[which]=e;M.st.n++;
-      if(which===curScr)show(e);if(old&&old!==cur&&old.blob)freeE(old);fin()})}catch(x){M.err='glass '+x;fin()}};
-   im.onload=function(){M.st.load=Math.round(performance.now()-t0);M.img=im;
-    /* <img> inside the picture decode a moment later (none on the bank page): make it once more */
-    make(function(){if(hasImg)setTimeout(function(){make(done)},350);else done();if(/[?&]glsdump/.test(location.search)&&which===curScr){dump(im,y0,W,H);stat()}})};
-   im.onerror=function(){M.err='img';done()};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(str)}catch(e){M.err='snap '+e;done()}}
- /* checking aid (only with ?glsdump on the local test server): send the page picture to compare it with the screen */
- function dump(im,y0,W,H){try{var c=document.createElement('canvas');c.width=im.width;c.height=im.height;c.getContext('2d').drawImage(im,0,0);var x=new XMLHttpRequest();x.open('POST','/glsdump?y0='+y0+'&w='+W+'&h='+H+'&sy='+(window.pageYOffset||0));x.send(c.toDataURL('image/png'))}catch(_){}}
- function stat(){try{var x=new XMLHttpRequest();x.open('POST','/glsstat');x.send(JSON.stringify({n:M.st.n,take:M.st.take,load:M.st.load,up:M.st.up,ver:M.ver,err:M.err,why:M.why,sda:SDA,t:Math.round(performance.now())}))}catch(_){}}
- function done(){busy=false;var w=pick();if(again||w!==-1){again=0;sched(w===curScr?60:250)}}
- function sched(ms){if(!M.on)return;if(st)clearTimeout(st);st=setTimeout(take,ms==null?200:ms)}
- function strip(s){return (s||'').replace(/(^|\s)down(?=\s|$)/g,' ').replace(/\s+/g,' ').trim()}
  /* selected-tab capsule: a backdrop-filter element over the glass (iOS: 0.87 brightness, -18, colour 1.2) */
  M.caps=function(cx,hw,hh,a){if(!M.on||!CAP)return;var k=[cx,hw,hh,a].map(function(n){return n.toFixed(2)}).join();if(k===capKey)return;capKey=k;var s=CAP.style;
   s.left=(cx-hw+MP).toFixed(2)+'px';s.top=(BH/2-hh+MP).toFixed(2)+'px';s.width=(2*hw).toFixed(2)+'px';s.height=(2*hh).toFixed(2)+'px';s.opacity=a.toFixed(3);
   var cw=CAPC*2*hh/PH,mid=Math.max(0,2*hw-2*cw);s.webkitMaskSize=s.maskSize='auto 100%,auto 100%,'+mid.toFixed(2)+'px 100%';s.webkitMaskPosition=s.maskPosition='0 0,100% 0,'+cw.toFixed(2)+'px 0'};
- /* without scroll-driven animations (old browsers): move the glass from scripts (it lags there) */
- function jsScroll(){var y=-(window.pageYOffset||0);for(var i=0;i<IMGS.length;i++)IMGS[i].style.transform='translateY('+y+'px)'}
- function on(){var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';$('edge').style.display='none';WIN.style.display='';M.on=true;place();try{paint()}catch(_){}}
+ function on(){var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';$('edge').style.display='none';WIN.style.display='';M.on=true;M.ver++;capKey='';try{paint()}catch(_){}}
  function off(){M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(WIN)WIN.style.display='none';paint()}catch(_){}}
- var LGQ=[],LGON=/[?&]glslog/.test(location.search);function LG(t,o){if(!LGON)return;o=o||{};o.t=t;o.ms=Math.round(performance.now());o.py=Math.round((window.pageYOffset||0)*10)/10;var v=window.visualViewport;if(v){o.vt=Math.round(v.offsetTop*10)/10;o.vh=Math.round(v.height*10)/10;o.vpt=Math.round(v.pageTop*10)/10}o.ih=window.innerHeight;o.ch=document.documentElement.clientHeight;if(WIN){var r=WIN.getBoundingClientRect();o.wt=Math.round(r.top*10)/10}var d=document.getElementById('dock');if(d){o.dt=Math.round(d.getBoundingClientRect().top*10)/10;o.dcs=getComputedStyle(d).top}if(IMGS[0]){var cs=getComputedStyle(IMGS[0]);o.tf=cs.transform;o.it=IMGS[0].style.top}o.gt=Math.round(geo.t*10)/10;LGQ.push(JSON.stringify(o))}
- if(LGON){setInterval(function(){LG('tick')},100);setInterval(function(){if(!LGQ.length)return;try{var x=new XMLHttpRequest();x.open('POST','/glslog');x.send(LGQ.join('\n'));LGQ=[]}catch(_){}},400);window.addEventListener('resize',function(){LG('resize')});if(window.visualViewport)visualViewport.addEventListener('resize',function(){LG('vvresize')})}
- /* ?glshud: small debug line at the top of the screen (pictures made / shown, long frames, scroll events per second) —
-    readable from a screenshot or a screen recording of the phone */
- if(/[?&]glshud/.test(location.search)){(function(){var d=document.createElement('div'),fr=[],se=[],lt=performance.now(),shows=0,ov=0;
+ /* ?glshud: small debug line at the top of the screen (long frames, scroll events per second) — readable from a screenshot
+    or a screen recording of the phone */
+ if(/[?&]glshud/.test(location.search)){(function(){var d=document.createElement('div'),fr=[],se=[],lt=performance.now();
   d.style.cssText='position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);z-index:99;font:600 13px/1.25 -apple-system,monospace;color:#0f0;background:rgba(0,0,0,.75);padding:3px 6px;pointer-events:none;white-space:pre';
   document.body.appendChild(d);addEventListener('scroll',function(){se.push(performance.now())},{passive:true});
   (function f(t){fr.push(t-lt);lt=t;if(fr.length>240)fr.shift();requestAnimationFrame(f)})(lt);
-  setInterval(function(){var now=performance.now();while(se.length&&now-se[0]>1000)se.shift();if(M.ver!==ov){shows++;ov=M.ver}
-   var long=0,mx=0;fr.forEach(function(x){if(x>34)long++;if(x>mx)mx=x});
-   d.textContent='snap '+M.st.n+' show '+M.ver+' up '+M.st.up+'ms take '+M.st.take+' load '+M.st.load+(M.err?' ERR '+M.err:'')+'\nframes>34ms '+long+'/'+fr.length+' max '+Math.round(mx)+'ms  scroll ev/s '+se.length+'  y '+Math.round(window.pageYOffset||0)},250)})()}
- M.dbg=function(){var i=IMGS[0];if(!i)return 'noimg';var cs=getComputedStyle(i);return [SDA,cs.animationName,cs.transform,(cs.animationTimeline||cs.webkitAnimationTimeline||'?'),window.pageYOffset,i.style.top,i.src.slice(0,30)].join('|')};
- M.off=off;M.snap=sched;M.size=function(){if(M.on)place()};
- M.start=function(){try{if(!init())return;rimMap(function(m){if(!m){off();return}layers(m,function(L){try{build(L);start2()}catch(e){M.err='build '+e;off()}})})}catch(e){M.err='start '+e;off()}};
- function start2(){var st2=document.createElement('style');st2.id='itb-css2';
-  st2.textContent='#dock .gimg{'+(SDA?'animation:itbScroll linear both;animation-timeline:scroll(root block);animation-range:0px 100000px;':'')+'will-change:transform}@keyframes itbScroll{from{transform:translateY(0)}to{transform:translateY(-100000px)}}';
-  document.head.appendChild(st2);on();
-  var app=document.getElementById('app'),mo=function(rs){for(var i=0;i<rs.length;i++){var r=rs[i];if(r.type==='attributes'&&r.attributeName==='class'&&strip(r.oldValue)===strip(r.target.getAttribute('class')))continue;M.why=r.type+':'+(r.attributeName||'')+':'+(r.target.className||r.target.nodeName||'')+':'+String(r.oldValue).slice(0,40);var ls=liveScr();if(!dirty[ls]){dirty[ls]=1;dirtyAt=dirtyAt||performance.now()}if(r.target===document.body)for(var j=0;j<nScr();j++)dirty[j]=1;sched();return}};
-  if(app&&window.MutationObserver){new MutationObserver(mo).observe(app,{subtree:true,childList:true,attributes:true,attributeOldValue:true,characterData:true});new MutationObserver(mo).observe(document.body,{attributes:true,attributeOldValue:true})}
-  var tch=function(e){touching=e.touches?e.touches.length:0};['touchstart','touchend','touchcancel'].forEach(function(t){window.addEventListener(t,tch,{passive:true,capture:true})});
-  window.addEventListener('scroll',function(){lastScroll=performance.now();if(!SDA)jsScroll()},{passive:true});
-  /* Safari folds/unfolds its toolbar on every scroll direction change: that is a resize of the height only. The page layout does
-     not depend on the height (only the dock uses svh), so the pictures are made again only when the width changes — before
-     v101 every toolbar move re-made the pictures of all 4 tabs: hundreds of ms of work on the phone right while scrolling */
-  var rp=function(){clearTimeout(rp.t);rp.t=setTimeout(place,120)},lastW=document.documentElement.clientWidth;
-  window.addEventListener('resize',function(){var w=document.documentElement.clientWidth;if(w!==lastW){lastW=w;for(var j=0;j<nScr();j++)dirty[j]=1;dirtyAt=performance.now();sched(250)}rp()});
-  if(window.visualViewport)visualViewport.addEventListener('resize',rp);[300,900,1600].forEach(function(t){setTimeout(place,t)});sched(0)}
+  setInterval(function(){var now=performance.now();while(se.length&&now-se[0]>1000)se.shift();var long=0,mx=0;fr.forEach(function(x){if(x>34)long++;if(x>mx)mx=x});
+   d.textContent='glass '+(M.on?'on':'off')+(M.err?' ERR '+M.err:'')+'  frames>34ms '+long+'/'+fr.length+' max '+Math.round(mx)+'ms  scroll ev/s '+se.length+'  y '+Math.round(window.pageYOffset||0)},250)})()}
+ M.off=off;
+ M.start=function(){try{if(!init())return;rimMap(function(m){if(!m){off();return}layers(m,function(L){try{build(L);on()}catch(e){M.err='build '+e;off()}})})}catch(e){M.err='start '+e;off()}};
  return M})();
 
 if(!BASIC)GLS.start();

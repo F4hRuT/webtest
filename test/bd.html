@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Стекло на backdrop-filter</title>
+<style>
+/* Prototype: glass of the menu made by Safari itself from what is under it (backdrop-filter), not from a precomputed picture.
+   Tone curve of iOS "Tinted" glass y = .125 + .5x - .2x^2 (x, y in 0..1): blur -> multiply by (.5 - .2x) -> + 32/255. */
+:root{color-scheme:dark}
+html,body{margin:0;background:#000}
+.app{position:relative;height:3000px}
+.app i{position:absolute;left:0;right:0;display:block}
+.win{position:fixed;left:50%;top:calc(100svh - env(safe-area-inset-bottom,0px) - 70px);width:360px;height:62px;margin-left:-180px}
+.win>div{position:absolute;inset:0;border-radius:31px;pointer-events:none}
+/* ?w : each layer is the iOS window (15 pt above, 13.67 below, 15.67 at the sides) and shows only the bar */
+.ww .win>div{inset:-15px -15.67px -13.67px -15.67px;border-radius:0;-webkit-mask:var(--bm) 15.67px 15px/360px 62px no-repeat;mask:var(--bm) 15.67px 15px/360px 62px no-repeat}
+.b1{-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);opacity:.245}
+.b2{-webkit-backdrop-filter:blur(13.26px);backdrop-filter:blur(13.26px)}
+.q{-webkit-backdrop-filter:invert(1) contrast(.25) brightness(.8);backdrop-filter:invert(1) contrast(.25) brightness(.8);mix-blend-mode:multiply}
+.c{background:rgb(32,32,32);mix-blend-mode:plus-lighter}
+/* ?grp : the layers inside a group with isolation + mask, like the menu window */
+.grp .win{isolation:isolate;-webkit-mask:linear-gradient(#000,#000);mask:linear-gradient(#000,#000)}
+</style></head><body>
+<main class="app" id="app"></main>
+<div class="win" id="win"><div class="b1"></div><div class="b2"></div><div class="q"></div><div class="c"></div></div>
+<script>
+/* ?g=v : the whole page one grey v (0..255) - to read the tone curve; ?r=y,h,R,G,B;... : bands at screen y (pt) */
+var Q=location.search;if(/[?&]w(&|$)/.test(Q)){document.documentElement.classList.add('ww');document.documentElement.style.setProperty('--bm','url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="62"><rect width="360" height="62" rx="31"/></svg>')+'")')}if(/[?&]grp/.test(Q))document.documentElement.classList.add('grp');var app=document.getElementById('app'),g=/[?&]g=(\d+)/.exec(Q);
+if(g)document.body.style.background=document.documentElement.style.background='rgb('+g[1]+','+g[1]+','+g[1]+')';
+var r=/[?&]r=([^&]+)/.exec(Q);if(r)decodeURIComponent(r[1]).split(';').forEach(function(t){var v=t.split(',').map(Number);if(v.length<5)return;
+ var i=document.createElement('i');i.style.cssText='top:'+v[0]+'px;height:'+v[1]+'px;background:rgb('+v[2]+','+v[3]+','+v[4]+')';app.appendChild(i)});
+if(/[?&]l=([^&]+)/.test(Q)){var lay=/[?&]l=([^&]+)/.exec(Q)[1].split(',');[].forEach.call(document.querySelectorAll('.win>div'),function(d){if(lay.indexOf(d.className)<0)d.style.display='none'})}
+</script>
+</body></html>
