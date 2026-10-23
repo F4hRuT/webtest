@@ -11,6 +11,8 @@
    Three ways to get HDR, each browser gets the ones that work for it (see pick()):
    av - AVIF 10-bit PQ with alpha (Safari), vd - HEVC PQ video under a mask (WebKit in other iOS browsers),
    gm - Ultra HDR JPEG with a gain map, base picture plain white (Chrome/Yandex/Samsung on Android, desktop Chrome).
+   gm is kept as simple as possible (bar-sized picture, plain corner rounding, no mask/fade/blend): with a mask and a fade
+   Chrome on a OnePlus 13R drew the menu with broken tiles and froze.
    Without HDR every way shows plain white on the white bar, so nothing changes. */
 :root{color-scheme:light;box-sizing:border-box;--fg:#1c1c1e;--mut:#6c6c70;--act:#8fae00}
 *,*::before,*::after{box-sizing:inherit}
@@ -39,7 +41,10 @@ p{margin:0 0 14px;color:var(--mut);font-size:14px}
 .tab .lb{position:absolute;left:-10px;right:-10px;top:39.3px;text-align:center;font-size:10px;line-height:12px;font-weight:500;white-space:nowrap;letter-spacing:.01em}
 .tab.on{color:var(--act)}
 /* HDR layers: glow about 1000 nits (page white about 203), the screen shows as much as it can */
-.hdr{display:none;pointer-events:none;dynamic-range-limit:no-limit;-webkit-dynamic-range-limit:no-limit}
+.hdr{display:none;pointer-events:none}
+.av,.vd{dynamic-range-limit:no-limit;-webkit-dynamic-range-limit:no-limit}
+.win>.gm{left:4px;top:4px;width:360px;height:62px;border-radius:31px}
+.win .gm.prs{-webkit-transition:none;transition:none}
 .prs{opacity:0;-webkit-transition:opacity .45s ease-out;transition:opacity .45s ease-out}
 .win.down .prs{opacity:1;-webkit-transition:opacity .08s ease-out;transition:opacity .08s ease-out}
 video.hdr{object-fit:fill}
@@ -58,8 +63,8 @@ body.nobar .bar,body.nobar .cap{visibility:hidden}
 <div class="dock" id="dock">
  <div class="win" id="win">
   <svg class="bar sh" viewBox="0 0 368 70" aria-hidden="true"><path id="bp"/></svg>
-  <img class="hdr gm rim" data-src="hdr/rim.jpg" alt="" aria-hidden="true">
-  <img class="hdr gm prs" data-src="hdr/press.jpg" alt="" aria-hidden="true">
+  <img class="hdr gm rim" data-src="hdr/rim_bar.jpg" alt="" aria-hidden="true">
+  <img class="hdr gm prs" data-src="hdr/press_bar.jpg" alt="" aria-hidden="true">
   <svg class="cap" id="cap" viewBox="0 0 99.55 54" aria-hidden="true"><path id="cp"/></svg>
   <div class="tabs" id="tabs" role="tablist" aria-label="Меню разделов"></div>
   <img class="hdr av rim" data-src="hdr/rim.avif" alt="" aria-hidden="true">
@@ -103,9 +108,6 @@ function $(i){return document.getElementById(i)}
 var Q=location.search,body=document.body,BP=bpath(BW,BH,4,4);
 $('bp').setAttribute('d',BP);
 $('cp').setAttribute('d',path(PW,PH,0,0));
-/* the Ultra HDR picture is a plain rectangle (JPEG has no transparency): cut it to the bar shape */
-var bm='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 368 70" width="368" height="70"><path d="'+BP+'"/></svg>')+'") 0 0/100% 100% no-repeat';
-[].forEach.call(document.querySelectorAll('.gm'),function(e){e.style.webkitMask=bm;e.style.mask=bm});
 var tabs=$('tabs'),cap=$('cap'),win=$('win'),h='',i;
 for(i=0;i<4;i++){var ic=ICONS[KEYS[i]],q=POS[KEYS[i]],tl=CX0+PITCH*i-PITCH/2;
  h+='<button type="button" class="tab" role="tab" aria-label="'+LABELS[i]+'" data-i="'+i+'" style="left:'+r2(tl)+'px;width:'+r2(PITCH)+'px"><svg viewBox="0 0 '+ic.w+' '+ic.h+'" width="'+q[2]+'" height="'+q[3]+'" style="left:'+r2(q[0]+icdx(i)-tl)+'px;top:'+q[1]+'px"><path fill="currentColor" fill-rule="evenodd" d="'+ic.d+'"/></svg><span class="lb">'+LABELS[i]+'</span></button>'}
@@ -132,6 +134,8 @@ var LBL={av:'картинка AVIF',vd:'видео',gm:'Ultra HDR'};
 function load(u){[].forEach.call(document.querySelectorAll('.'+u),function(e){if(!e.getAttribute('src')&&e.getAttribute('data-src')){e.setAttribute('src',e.getAttribute('data-src'));if(e.tagName==='VIDEO'){e.preload='auto';e.load()}}
  if(e.tagName==='VIDEO'){var p=e.play();if(p&&p.catch)p.catch(function(){})}})}
 var sw=$('sw'),st=$('st'),cur='auto';
+/* outside Apple devices the AVIF and video ways only broke the menu (OnePlus 13R, Chrome): no buttons for them there */
+if(!APPLE)[].forEach.call(sw.querySelectorAll('[data-m=av],[data-m=vd]'),function(b){b.style.display='none'});
 function mode(m){cur=m;var use=m==='auto'?pick():m==='off'?[]:[m];
  body.className=use.map(function(u){return 'u-'+u}).join(' ')+(/[?&]nobar/.test(Q)?' nobar':'');
  use.forEach(load);
@@ -143,7 +147,8 @@ function status(use){st.textContent='Экран HDR: '+(mm('(dynamic-range: high
  ' · сейчас: '+(use.length?use.map(function(u){return LBL[u]}).join(' + '):'без HDR')}
 sw.addEventListener('click',function(e){var b=e.target;while(b&&b!==sw&&!b.getAttribute('data-m'))b=b.parentNode;if(b&&b!==sw)mode(b.getAttribute('data-m'))});
 var bg=(/[?&]bg=([0-9a-f]{3,6})/i.exec(Q)||[])[1];if(bg)document.documentElement.style.background=body.style.background='#'+bg;
-mode((/[?&]m=(auto|av|vd|gm|off)/.exec(Q)||[])[1]||'auto');
+var m0=(/[?&]m=(auto|av|vd|gm|off)/.exec(Q)||[])[1]||'auto';if(!APPLE&&(m0==='av'||m0==='vd'))m0='auto';
+mode(m0);
 })();
 </script>
 </body></html>
