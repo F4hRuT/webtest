@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Растянутая копия фона</title>
+<style>
+/* Checking aid: can a backdrop-filter element with a transform show a stretched copy of what lies under its own box?
+   ?v=a  strip is a child of body, fixed
+   ?v=b  strip inside a fixed container
+   ?v=c  as b + container has transform
+   ?v=d  as b + strip has opacity .5 and plus-lighter
+   ?v=e  as b + strip is position:absolute in container
+   ?f=   filter (default brightness(1.001)) */
+html,body{margin:0;background:#000;height:3000px}
+.line{position:absolute;left:0;right:0;top:400px;height:6px;background:#fff}
+.box{position:fixed;left:0;top:300px;width:100%;height:300px}
+.s{left:0;width:100%;height:6px;transform-origin:0 0;transform:scale(1,20);pointer-events:none}
+</style></head><body>
+<div class="line"></div>
+<script>
+var Q=location.search,v=(/[?&]v=(\w)/.exec(Q)||[])[1]||'a',f=decodeURIComponent((/[?&]f=([^&]+)/.exec(Q)||[])[1]||'brightness(1.001)');
+var s=document.createElement('div');s.className='s';s.style.webkitBackdropFilter=s.style.backdropFilter=f;
+if(v==='a'){s.style.position='fixed';s.style.top='400px';document.body.appendChild(s)}
+else{var b=document.createElement('div');b.className='box';document.body.appendChild(b);s.style.position='absolute';s.style.top='100px';
+ if(v==='c')b.style.transform='scale(1.0001)';if(v==='d'){s.style.opacity='.5';s.style.mixBlendMode='plus-lighter'}
+ b.appendChild(s)}
+</script>
+</body></html>
