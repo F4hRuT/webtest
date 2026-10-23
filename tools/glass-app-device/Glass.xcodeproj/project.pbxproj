@@ -1,0 +1,24 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		0000A1B2C3D4E5F600000007 = {isa = PBXBuildFile; fileRef = 0000A1B2C3D4E5F600000006; };
+		0000A1B2C3D4E5F600000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		0000A1B2C3D4E5F600000008 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0000A1B2C3D4E5F60000000F = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glass.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0000A1B2C3D4E5F600000002 = {isa = PBXGroup; children = (0000A1B2C3D4E5F600000006, 0000A1B2C3D4E5F600000008, 0000A1B2C3D4E5F600000003); sourceTree = "<group>"; };
+		0000A1B2C3D4E5F600000003 = {isa = PBXGroup; children = (0000A1B2C3D4E5F60000000F); name = Products; sourceTree = "<group>"; };
+		0000A1B2C3D4E5F600000005 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (0000A1B2C3D4E5F600000007); runOnlyForDeploymentPostprocessing = 0; };
+		0000A1B2C3D4E5F60000000D = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		0000A1B2C3D4E5F60000000E = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		0000A1B2C3D4E5F600000004 = {isa = PBXNativeTarget; buildConfigurationList = 0000A1B2C3D4E5F60000000B; buildPhases = (0000A1B2C3D4E5F600000005, 0000A1B2C3D4E5F60000000D, 0000A1B2C3D4E5F60000000E); buildRules = (); dependencies = (); name = Glass; productName = Glass; productReference = 0000A1B2C3D4E5F60000000F; productType = "com.apple.product-type.application"; };
+		0000A1B2C3D4E5F600000001 = {isa = PBXProject; buildConfigurationList = 0000A1B2C3D4E5F600000009; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = 0000A1B2C3D4E5F600000002; productRefGroup = 0000A1B2C3D4E5F600000003; projectDirPath = ""; projectRoot = ""; targets = (0000A1B2C3D4E5F600000004); attributes = {TargetAttributes = {0000A1B2C3D4E5F600000004 = {CreatedOnToolsVersion = 27.1;};};}; };
+		0000A1B2C3D4E5F60000000A = {isa = XCBuildConfiguration; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 27.0; SWIFT_VERSION = 5.0; ONLY_ACTIVE_ARCH = YES; }; name = Debug; };
+		0000A1B2C3D4E5F600000009 = {isa = XCConfigurationList; buildConfigurations = (0000A1B2C3D4E5F60000000A); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+		0000A1B2C3D4E5F60000000C = {isa = XCBuildConfiguration; buildSettings = {PRODUCT_NAME = Glass; PRODUCT_BUNDLE_IDENTIFIER = "com.f4hrut.glasstest"; INFOPLIST_FILE = Info.plist; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = NS9668WCV9; TARGETED_DEVICE_FAMILY = 1; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 27.0; SWIFT_VERSION = 5.0; GENERATE_INFOPLIST_FILE = NO; ASSETCATALOG_COMPILER_APPICON_NAME = ""; }; name = Debug; };
+		0000A1B2C3D4E5F60000000B = {isa = XCConfigurationList; buildConfigurations = (0000A1B2C3D4E5F60000000C); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+	};
+	rootObject = 0000A1B2C3D4E5F600000001;
+}

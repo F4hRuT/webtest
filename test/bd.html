@@ -20,12 +20,16 @@ html,body{margin:0;background:#000}
 .c{background:rgb(32,32,32);mix-blend-mode:plus-lighter}
 /* ?grp : the layers inside a group with isolation + mask, like the menu window */
 .grp .win{isolation:isolate;-webkit-mask:linear-gradient(#000,#000);mask:linear-gradient(#000,#000)}
+/* ?st : stretch test — a 3 px tall backdrop strip 20 px above the window, scaled 30x downward: does Safari stretch what it
+   captured (edge replication) or capture the whole transformed area? */
+.st{position:fixed;left:0;width:402px;height:3px;top:calc(100svh - env(safe-area-inset-bottom,0px) - 170px);transform-origin:0 0;transform:scale(1,30);-webkit-backdrop-filter:brightness(1.001);backdrop-filter:brightness(1.001);pointer-events:none}
 </style></head><body>
 <main class="app" id="app"></main>
+<div class="st" id="st" style="display:none"></div>
 <div class="win" id="win"><div class="b1"></div><div class="b2"></div><div class="q"></div><div class="c"></div></div>
 <script>
 /* ?g=v : the whole page one grey v (0..255) - to read the tone curve; ?r=y,h,R,G,B;... : bands at screen y (pt) */
-var Q=location.search;if(/[?&]w(&|$)/.test(Q)){document.documentElement.classList.add('ww');document.documentElement.style.setProperty('--bm','url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="62"><rect width="360" height="62" rx="31"/></svg>')+'")')}if(/[?&]grp/.test(Q))document.documentElement.classList.add('grp');var app=document.getElementById('app'),g=/[?&]g=(\d+)/.exec(Q);
+var Q=location.search;if(/[?&]w(&|$)/.test(Q)){document.documentElement.classList.add('ww');document.documentElement.style.setProperty('--bm','url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="62"><rect width="360" height="62" rx="31"/></svg>')+'")')}if(/[?&]st/.test(Q))document.getElementById('st').style.display='block';if(/[?&]grp/.test(Q))document.documentElement.classList.add('grp');var app=document.getElementById('app'),g=/[?&]g=(\d+)/.exec(Q);
 if(g)document.body.style.background=document.documentElement.style.background='rgb('+g[1]+','+g[1]+','+g[1]+')';
 var r=/[?&]r=([^&]+)/.exec(Q);if(r)decodeURIComponent(r[1]).split(';').forEach(function(t){var v=t.split(',').map(Number);if(v.length<5)return;
  var i=document.createElement('i');i.style.cssText='top:'+v[0]+'px;height:'+v[1]+'px;background:rgb('+v[2]+','+v[3]+','+v[4]+')';app.appendChild(i)});
