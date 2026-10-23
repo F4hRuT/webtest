@@ -143,8 +143,19 @@ function mode(m){cur=m;var use=m==='auto'?pick():m==='off'?[]:[m];
  try{history.replaceState(null,'',location.pathname+'?m='+m+(Q.replace(/^\?/,'&').replace(/&m=[a-z]+/g,'')))}catch(_){}
  status(use)}
 function mm(q){try{return matchMedia(q).matches}catch(_){return false}}
-function status(use){st.textContent='Экран HDR: '+(mm('(dynamic-range: high)')?'да':mm('(dynamic-range: standard)')?'нет':'неизвестно')+
- ' · сейчас: '+(use.length?use.map(function(u){return LBL[u]}).join(' + '):'без HDR')}
+/* device line: model, Android version, browser - so one screenshot tells why there is no glow */
+var DEV='',AV=0;(function(){var m=/Android (\d+)/.exec(ua),c=/(YaBrowser|SamsungBrowser|EdgA|OPR|Chrome|CriOS|Version)\/(\d+)/.exec(ua);
+ if(m&&m[1]!=='10')AV=+m[1];DEV=(m?'Android '+m[1]:IOS?'iOS':'')+(c?' · '+c[1].replace('Version','Safari').replace('CriOS','Chrome').replace('YaBrowser','Яндекс').replace('SamsungBrowser','Samsung')+' '+c[2]:'');
+ var d=navigator.userAgentData;if(d&&d.getHighEntropyValues)d.getHighEntropyValues(['platformVersion','model','fullVersionList']).then(function(v){
+  if(d.platform==='Android'&&v.platformVersion)AV=parseInt(v.platformVersion,10)||AV;
+  var br=(v.fullVersionList||[]).filter(function(x){return !/Not|Chromium/.test(x.brand)})[0];
+  DEV=(v.model?v.model+' · ':'')+(d.platform==='Android'?'Android '+(AV||'?'):d.platform)+(br?' · '+br.brand.replace('Google ','').replace('YaBrowser','Яндекс')+' '+parseInt(br.version,10):'');status(LAST)}).catch(function(){})})();
+var LAST=[];
+function status(use){LAST=use;var hdr=mm('(dynamic-range: high)'),why='';
+ if(!hdr&&mm('(dynamic-range: standard)'))why='экран без HDR — свечения не будет';
+ else if(AV&&AV<14&&use.indexOf('gm')>=0)why='для HDR-картинок в Chrome нужен Android 14 или новее';
+ st.textContent='Экран HDR: '+(hdr?'да':mm('(dynamic-range: standard)')?'нет':'неизвестно')+' · сейчас: '+(use.length?use.map(function(u){return LBL[u]}).join(' + '):'без HDR')+
+  (DEV?' · '+DEV:'')+(why?' · '+why:'')}
 sw.addEventListener('click',function(e){var b=e.target;while(b&&b!==sw&&!b.getAttribute('data-m'))b=b.parentNode;if(b&&b!==sw)mode(b.getAttribute('data-m'))});
 var bg=(/[?&]bg=([0-9a-f]{3,6})/i.exec(Q)||[])[1];if(bg)document.documentElement.style.background=body.style.background='#'+bg;
 var m0=(/[?&]m=(auto|av|vd|gm|off)/.exec(Q)||[])[1]||'auto';if(!APPLE&&(m0==='av'||m0==='vd'))m0='auto';
