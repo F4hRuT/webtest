@@ -400,8 +400,8 @@ GLS=(function(){
    box(0,MP-EO,BWX,EO+DP,mm(m('to bottom',DP),0,EO-MP));
    box(0,MP+BH-DP,BWX,EO+DP,mm(m('to top',DP),0,-(MP+BH-DP)));
    /* ends: from EO pt outside to the start of the straight part */
-   box(MP-EO,0,EO+BH/2,BHX,mm(m('to right',BH/2*.6),EO-MP,0));
-   box(MP+BW-BH/2,0,EO+BH/2,BHX,mm(m('to left',BH/2*.6),-(MP+BW-BH/2),0))}
+   box(MP-EO,0,EO+BH/2,BHX,mm(m('to right',DP),EO-MP,0));
+   box(MP+BW-BH/2,0,EO+BH/2,BHX,mm(m('to left',DP),-(MP+BW-BH/2),0))}
   /* order: x Kl, + A, - |A| (dark ring), then the colour gain last: no channel is cut at 0 or 255 before the end */
   if(OFF.indexOf('rim')<0){if(OFF.indexOf('mul')<0)el('div',ab+mk+'background:url('+L.mul+') 0 0/100% 100% no-repeat;mix-blend-mode:multiply',WIN);
    if(OFF.indexOf('add')<0)el('div',ab+mk+'background:url('+L.add+') 0 0/100% 100% no-repeat;mix-blend-mode:plus-lighter',WIN);
