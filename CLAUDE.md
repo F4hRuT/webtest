@@ -152,6 +152,9 @@ Safari, в симуляторе не повторилось); (2) старые �
 - Запись экрана: `devicectl … screen-record` на этом телефоне не поддерживается → своё приложение `IPhoneRec.app` (папка-черновик
   `rec/`, исходник `rec.swift`; берёт ТОЛЬКО устройство «экран iPhone», камеры не трогать; доступ «Камера» пользователь разрешил):
   `open -W -a …/IPhoneRec.app --args out.mov <сек>` (60 к/с, H.264). Начало записи сбрасывает сеанс safaridriver.
+- **ЗАПРЕЩЕНО: касания через safaridriver (`swipe`/`tap`, WebDriver actions).** 24.10.2026 после них на iPhone пользователя
+  перестали работать системные жесты (смахнуть Safari, Пункт управления); помогла только перезагрузка телефона.
+  Сжатую панель Safari и прокрутку проверяет пользователь пальцем. Снимки — только `devicectl … capture screenshot`.
 - safaridriver на телефоне: `safaridriver -p 4446` (в фоне), сеанс с `platformName: iOS`, `safari:deviceUDID`. Навигация и JS
   работают, но ПОСЛЕ любого касания через WebDriver сеанс виснет (resolveBrowsingContext) — сбрасывать: `devicectl … launch
   --terminate-existing com.apple.mobilesafari`. Синтетические касания листают мгновенно, без инерции — для плавности не годятся:
