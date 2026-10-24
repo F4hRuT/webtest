@@ -248,11 +248,9 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 
 /* dock with the liquid-glass tab bar */
 .dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 5px);z-index:20;display:block;width:100%;height:80px;visibility:hidden;border:0;background:transparent;color-scheme:dark}
-/* the menu follows Safari's bottom bar: it goes down with it when the bar folds (v111, user's wish; v115: 2 px lower at the user's request (v114: back to v111 — and Safari paints a solid dark band under its buttons over the menu
+/* the menu follows Safari's bottom bar: it goes down with it when the bar folds (v111, user's wish; v116: back to v111 (v115: 2 px lower also brought the band; and Safari paints a solid dark band under its buttons over the menu
    (normal Safari on the iPhone: 4 px lower already does; in automation mode only from 8 px)); the glass is backdrop-filter
    since v106, so moving it no longer flickers) */
-
-#dock .stage{transform:translateY(2px)}
 
 /* skeleton: shapes shimmer first, content settles in after */
 .sk{transition:background-color .45s var(--ease)}
@@ -424,7 +422,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 115</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 116</p>
  </div>
 </section>
 
@@ -640,5 +638,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=115"></script>
+<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=116"></script>
 </body></html>
