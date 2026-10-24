@@ -252,14 +252,6 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    (normal Safari on the iPhone: 4 px lower already does; in automation mode only from 8 px)); the glass is backdrop-filter
    since v106, so moving it no longer flickers) */
 
-/* weak blur under the menu: starts softly at the middle of the bar (bar centre = dock bottom + 3 + 31 px) and goes down past
-   the screen bottom, under Safari's buttons (v117, user's wish). Two halves: one full-width fixed layer at the bottom makes
-   Safari paint a black band under its buttons (it reacts to fixed things wider than ~80% near its bar) */
-.ublur.l{left:0}.ublur.r{right:0}
-.ublur{position:fixed;width:52%;bottom:-150px;height:calc(env(safe-area-inset-bottom,0px) + 39px + 150px);z-index:19;pointer-events:none;
- -webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);
- -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 26px);mask-image:linear-gradient(to bottom,transparent 0,#000 26px)}
-
 /* skeleton: shapes shimmer first, content settles in after */
 .sk{transition:background-color .45s var(--ease)}
 .sk>*{transition:opacity .5s var(--ease) var(--d,0s)}
@@ -430,7 +422,7 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
    <button class="btn btn-p tap sk" data-sq="pill" data-toast="Заявка на карту Black открыта">Оформить карту Black</button>
    <button class="btn btn-g tap sk" data-sq="pill" data-rim data-go="1">Сравнить тарифы</button>
   </div>
-  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 118</p>
+  <p class="foot">Лаймо — вымышленный банк. Демонстрационный макет интерфейса, все данные условные.<br>Версия 119</p>
  </div>
 </section>
 
@@ -646,5 +638,5 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 })();
 </script>
 
-<div class="ublur l" aria-hidden="true"></div><div class="ublur r" aria-hidden="true"></div><div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=118"></script>
+<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="menu.js?v=119"></script>
 </body></html>
