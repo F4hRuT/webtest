@@ -52,5 +52,5 @@ if(/[?&]dump/.test(location.search))setTimeout(function(){var G=ITB.gls();var x=
 if(/[?&]snapdbg/.test(location.search))setInterval(function(){var G=window.ITB&&ITB.gls&&ITB.gls();if(!G||!G.img)return;var d=document.getElementById('dbg');if(!d){d=document.createElement('img');d.id='dbg';d.style.cssText='position:fixed;left:0;top:60px;width:200px;border:1px solid red;z-index:99;background:#333';document.body.appendChild(d)}if(d.src!==G.img.src)d.src=G.img.src},500);
 })();
 </script>
-<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=120"></script>
+<div class="dock" id="dock" role="navigation" aria-label="Меню разделов"></div><script src="../menu.js?v=121"></script>
 </body></html>
