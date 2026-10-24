@@ -642,10 +642,11 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ready);else re
 <script>
 /* perf test: switches tabs by itself like a tap (ITB.set) and records frame intervals after each switch */
 (function(){var out=document.getElementById('perf'),L=[],seq=[1,2,3,0,1,2,3,0],k=0;
+ var PS=0,orig=null;function wrap(){if(orig||!window.ITBH)return;orig=ITBH.sel;ITBH.sel=function(i){var t=performance.now();if(!/[?&]nopage/.test(location.search))orig(i);PS=performance.now()-t}}
  function run(){if(k>=seq.length){out.textContent=L.join('\n');return}
-  var i=seq[k++],fr=[],t0=performance.now(),last=t0,c0=performance.now();ITB.set(i);var callMs=performance.now()-c0;
+  wrap();var i=seq[k++],fr=[],t0=performance.now(),last=t0,c0=performance.now();ITB.set(i);var callMs=performance.now()-c0;
   (function f(t){fr.push(t-last);last=t;if(t-t0<1300)requestAnimationFrame(f);else{fr.shift();var s=fr.slice().sort(function(a,b){return b-a});
-   var long=fr.filter(function(x){return x>20}).length;L.push('#'+k+' tab'+i+' call '+callMs.toFixed(0)+'ms  max '+s[0].toFixed(0)+' '+s[1].toFixed(0)+' '+s[2].toFixed(0)+'  >20ms:'+long+'  n'+fr.length);
+   var long=fr.filter(function(x){return x>20}).length;L.push('#'+k+' tab'+i+' call '+callMs.toFixed(0)+' page '+PS.toFixed(0)+'ms  max '+s[0].toFixed(0)+' '+s[1].toFixed(0)+' '+s[2].toFixed(0)+'  >20ms:'+long+'  n'+fr.length);
    out.textContent=L.join('\n');setTimeout(run,700)}})(t0)}
  setTimeout(run,5000)})();
 </script></body></html>
