@@ -264,7 +264,10 @@ svg.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;str
 @keyframes pop{from{transform:translateY(10px) scale(.975)}to{transform:none}}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important}}
-</style></head>
+</style><script>(function(){var q=location.search,c='';
+if(/[?&]x=a/.test(q))c+='.scr.on{animation:none!important}';
+if(/[?&]x=b/.test(q))c+='.scr{display:block!important}.scr:not(.on){position:absolute!important;left:0;right:0;top:0;visibility:hidden;pointer-events:none;height:0;overflow:hidden}';
+if(c){var e=document.createElement('style');e.textContent=c;document.head.appendChild(e)}})()</script></head>
 <body class="ld">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
  <defs><linearGradient id="rimg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".26"/><stop offset=".22" stop-color="#fff" stop-opacity=".07"/><stop offset=".78" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".14"/></linearGradient>
