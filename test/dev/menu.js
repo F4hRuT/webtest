@@ -146,11 +146,12 @@ function content(sc,color,weight,rf){var c=document.createElement('canvas');c.wi
 function buildTex(){texW=content(TS,'#ffffff',500);texWS=content(TS,'#ffffff',500,1);texO=content(TS,'#b6d70a',600);texOS=content(TS,'#b6d70a',600,1);texOD=texOS.getContext('2d').getImageData(0,0,texOS.width,texOS.height);texWD=texWS.getContext('2d').getImageData(0,0,texWS.width,texWS.height)}
 var REFR={mag:1.096,band:.70,edge:.33,peek:12,rim:4,tb:.366,k:.8}      ,texOD=null,texWD=null,lensC=document.createElement('canvas'),lensX=lensC.getContext('2d'),lensID=null;
 function mkLut(){var a=new Float32Array(1024),p=new Float32Array(1024);for(var i=0;i<1024;i++){a[i]=Math.pow(i/1023,REFR.edge);p[i]=Math.pow(i/1023,1.3)}return [a,p]}
-/* v121 (speed): the lens is computed at most 2 px per pt (at 3x it was 2.25 times more work per frame) into one buffer made once
-   (before, the canvas and its pixel buffer were made anew on every frame the capsule changed size: garbage, stutters) */
+/* v121 (speed): the lens is computed at most 2 px per pt (at 3x it was 2.25 times more work per frame) into a buffer that only grows (with
+   a margin): before, the canvas and its pixel buffer were made anew on every frame the capsule changed size (garbage,
+   stutters); one big buffer for the whole bar was worse (Safari uploads all of it every frame) */
 function drawRefracted(c,cx,cy,hw,hh,pk){
- var sx=Math.min(2,baseC.width/CW),x0=Math.floor((cx-hw)*sx)-1,y0=Math.floor((cy-hh)*sx)-1,x1=Math.ceil((cx+hw)*sx)+1,y1=Math.ceil((cy+hh)*sx)+1,w=x1-x0,h=y1-y0,WA=Math.ceil(CW*sx)+4,HA=Math.ceil(CH*sx)+4;
- if(w>WA||h>HA)return;if(lensC.width!==WA||lensC.height!==HA||!lensID){lensC.width=WA;lensC.height=HA;lensID=lensX.createImageData(WA,HA)}
+ var sx=Math.min(2,baseC.width/CW),x0=Math.floor((cx-hw)*sx)-1,y0=Math.floor((cy-hh)*sx)-1,x1=Math.ceil((cx+hw)*sx)+1,y1=Math.ceil((cy+hh)*sx)+1,w=x1-x0,h=y1-y0;
+ if(!lensID||w>lensC.width||h>lensC.height){lensC.width=Math.max(w,lensC.width)+24;lensC.height=Math.max(h,lensC.height)+12;lensID=lensX.createImageData(lensC.width,lensC.height)}var WA=lensC.width;
  var LT=REFR.lut||(REFR.lut=mkLut()),LE_=LT[0],LP=LT[1],out=lensID.data,src=texOD.data,TW=texOD.width,TH=texOD.height,ts=TW/CW,r=hh,a=Math.max(0,hw-hh),b=r*REFR.band,
      mk=(1-1/REFR.mag)*pk,inv=1/sx,o=0;
  for(var j=0;j<h;j++){var py=(y0+j+.5)*inv-cy;
