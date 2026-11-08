@@ -27,22 +27,24 @@ final class MotionProbe: NSObject {
   return v
  }
  func collect(_ l:CALayer,_ path:String,_ parent:CGAffineTransform,_ result:inout [[String:Any]]) {
-  let p=l.presentation() ?? l
+  let p=l
+  let modelLayer=l.model()
   let m=p.affineTransform()
   let ax=p.bounds.minX+p.bounds.width*p.anchorPoint.x, ay=p.bounds.minY+p.bounds.height*p.anchorPoint.y
   let local=CGAffineTransform(a:m.a,b:m.b,c:m.c,d:m.d,tx:p.position.x+m.tx-m.a*ax-m.c*ay,ty:p.position.y+m.ty-m.b*ax-m.d*ay)
   let global=local.concatenating(parent)
-  let name=(l.delegate as? UIView).map{String(describing:type(of:$0))} ?? String(describing:type(of:l))
+  let name=(modelLayer.delegate as? UIView).map{String(describing:type(of:$0))} ?? String(describing:type(of:l))
   if ["_UITabBarItemPlatterView","_UILiquidLensView","_UITabSelectionView","ClearGlassView","GlowContainerView","LittleGlowView","BackdropView"].contains(name) || (name=="UIView" && path.contains("lens")) {
    let r=p.bounds.applying(global)
-   let model=(l.delegate as? UIView).map{$0.convert($0.bounds,to:(window.rootViewController as? UITabBarController)?.tabBar)} ?? .zero
-   result.append(["modelRect":[model.minX,model.minY,model.width,model.height],"modelBounds":[l.bounds.width,l.bounds.height],"modelPos":[l.position.x,l.position.y],"modelMatrix":[l.transform.m11,l.transform.m22,l.transform.m41,l.transform.m42],"id":path,"view":name,"bounds":[p.bounds.width,p.bounds.height],"pos":[p.position.x,p.position.y],"rect":[r.minX,r.minY,r.width,r.height],"opacity":p.opacity,"matrix":[p.transform.m11,p.transform.m22,p.transform.m41,p.transform.m42],"shadow":[p.shadowOpacity,p.shadowRadius,p.shadowOffset.width,p.shadowOffset.height]])
+   let model=(modelLayer.delegate as? UIView).map{$0.convert($0.bounds,to:(window.rootViewController as? UITabBarController)?.tabBar)} ?? .zero
+   result.append(["modelRect":[model.minX,model.minY,model.width,model.height],"modelBounds":[modelLayer.bounds.width,modelLayer.bounds.height],"modelPos":[modelLayer.position.x,modelLayer.position.y],"modelMatrix":[modelLayer.transform.m11,modelLayer.transform.m22,modelLayer.transform.m41,modelLayer.transform.m42],"id":path,"view":name,"bounds":[p.bounds.width,p.bounds.height],"pos":[p.position.x,p.position.y],"rect":[r.minX,r.minY,r.width,r.height],"opacity":p.opacity,"matrix":[p.transform.m11,p.transform.m22,p.transform.m41,p.transform.m42],"shadow":[p.shadowOpacity,p.shadowRadius,p.shadowOffset.width,p.shadowOffset.height]])
   }
   for(i,s) in (l.sublayers ?? []).enumerated(){collect(s,path+(name=="_UILiquidLensView" ? "/lens" : "")+"/"+String(i),global,&result)}
  }
  @objc func tick(_ d:CADisplayLink){
   guard let tab=(window.rootViewController as? UITabBarController)?.tabBar else{return}
-  var rows:[[String:Any]]=[];for(i,s) in (tab.layer.sublayers ?? []).enumerated(){collect(s,"tab/"+String(i),.identity,&rows)}
+  let root=tab.layer.presentation() ?? tab.layer
+  var rows:[[String:Any]]=[];for(i,s) in (root.sublayers ?? []).enumerated(){collect(s,"tab/"+String(i),.identity,&rows)}
   frames.append(["t":d.timestamp,"now":CACurrentMediaTime(),"target":d.targetTimestamp,"layers":rows])
   if d.timestamp-lastWrite>1 {
    lastWrite=d.timestamp;let batch:[String:Any]=["frames":frames,"events":events];frames=[];events=[]
