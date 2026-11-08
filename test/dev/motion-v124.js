@@ -144,7 +144,7 @@ function drawContent(x,color,weight){x.fillStyle=color;
   x.font=weight+' 10px '+FONT;x.textAlign='center';x.textBaseline='alphabetic';x.fillText(LABELS[i],cxp,PADY+48.8)}}
 function content(sc,color,weight,rf){var c=document.createElement('canvas');c.width=Math.round(CW*sc);c.height=Math.round(CH*sc);var x=c.getContext('2d',rf?{willReadFrequently:true}:undefined);x.setTransform(c.width/CW,0,0,c.height/CH,0,0);drawContent(x,color,weight);return c}
 function buildTex(){texW=content(TS,'#ffffff',500);texWS=content(TS,'#ffffff',500,1);texO=content(TS,'#b6d70a',600);texOS=content(TS,'#b6d70a',600,1);texOD=texOS.getContext('2d').getImageData(0,0,texOS.width,texOS.height);texWD=texWS.getContext('2d').getImageData(0,0,texWS.width,texWS.height)}
-var REFR={mag:1.096,band:.70,edge:.33,peek:12,rim:4,tb:.366,k:.8}      ,texOD=null,texWD=null,lensC=document.createElement('canvas'),lensX=lensC.getContext('2d'),lensID=null;
+var REFR={mag:1.096,band:.70,edge:.33,peek:12,rim:4,tb:.366,k:.8,disp:.65}      ,texOD=null,texWD=null,lensC=document.createElement('canvas'),lensX=lensC.getContext('2d'),lensID=null;
 function mkLut(){var a=new Float32Array(1024),p=new Float32Array(1024);for(var i=0;i<1024;i++){a[i]=Math.pow(i/1023,REFR.edge);p[i]=Math.pow(i/1023,1.3)}return [a,p]}
 /* v121 (speed): the lens is computed at most 2 px per pt (at 3x it was 2.25 times more work per frame) into a buffer that only grows (with
    a margin): before, the canvas and its pixel buffer were made anew on every frame the capsule changed size (garbage,
@@ -153,7 +153,7 @@ function drawRefracted(c,cx,cy,hw,hh,pk){
  var sx=Math.min(2,baseC.width/CW),x0=Math.floor((cx-hw)*sx)-1,y0=Math.floor((cy-hh)*sx)-1,x1=Math.ceil((cx+hw)*sx)+1,y1=Math.ceil((cy+hh)*sx)+1,w=x1-x0,h=y1-y0;
  if(!lensID||w>lensC.width||h>lensC.height){lensC.width=Math.max(w,lensC.width)+24;lensC.height=Math.max(h,lensC.height)+12;lensID=lensX.createImageData(lensC.width,lensC.height)}var WA=lensC.width;
  var LT=REFR.lut||(REFR.lut=mkLut()),LE_=LT[0],LP=LT[1],out=lensID.data,src=texOD.data,TW=texOD.width,TH=texOD.height,ts=TW/CW,r=hh,a=Math.max(0,hw-hh),b=r*REFR.band,
-     mk=(1-1/REFR.mag)*pk,inv=1/sx,o=0;
+     mk=(1-1/REFR.mag)*pk,inv=1/sx,o=0,channels=[0,0,0],alphas=[0,0,0];
  for(var j=0;j<h;j++){var py=(y0+j+.5)*inv-cy;
   for(var i=0;i<w;i++,o+=4){var px=(x0+i+.5)*inv-cx,qx=Math.abs(px)-a;if(qx<0)qx=0;var ql=Math.sqrt(qx*qx+py*py),d=r-ql;if(d<-1.5){out[o+3]=0;continue}
    var dd=d>0?d:0,ppx=px,ppy=py,wm=1;
@@ -166,6 +166,16 @@ function drawRefracted(c,cx,cy,hw,hh,pk){
    var qx2=Math.abs(X)-a;if(qx2<0)qx2=0;src=(qx2*qx2+Y*Y<=r*r||!texWD)?texOD.data:texWD.data;
    var p=(iy*TW+ix)*4,q=p+TW*4,w00=(1-fx)*(1-fy),w10=fx*(1-fy),w01=(1-fx)*fy,w11=fx*fy;
    var A00=src[p+3]*w00,A10=src[p+7]*w10,A01=src[q+3]*w01,A11=src[q+7]*w11,A=A00+A10+A01+A11;
+   /* Wavelength separation belongs to the moving optical rim only. Keep
+      premultiplied coverage per channel so fringe pixels also survive just
+      outside an icon; no per-pixel allocations or extra full-page sampling. */
+   var dispersion=REFR.disp*pk*(1-wm),maximum=A;
+   if(dispersion>.03&&ql>1e-4){
+    for(var ch=0;ch<3;ch++){var shift=(1-ch)*dispersion,xx=tx+shift*(px<0?-qx:qx)/ql*ts,yy=ty+shift*py/ql*ts,xi=Math.floor(xx),yi=Math.floor(yy);
+     if(xi<0||yi<0||xi>=TW-1||yi>=TH-1){channels[ch]=alphas[ch]=0;continue}
+     var fx2=xx-xi,fy2=yy-yi,p2=(yi*TW+xi)*4,q2=p2+TW*4,a0=src[p2+3]*(1-fx2)*(1-fy2),a1=src[p2+7]*fx2*(1-fy2),a2=src[q2+3]*(1-fx2)*fy2,a3=src[q2+7]*fx2*fy2;
+     alphas[ch]=a0+a1+a2+a3;channels[ch]=src[p2+ch]*a0+src[p2+4+ch]*a1+src[q2+ch]*a2+src[q2+4+ch]*a3;maximum=Math.max(maximum,alphas[ch]);}
+    if(maximum<.5){out[o+3]=0;continue}for(ch=0;ch<3;ch++)out[o+ch]=channels[ch]/maximum;out[o+3]=maximum;continue;}
    if(A<.5){out[o+3]=0;continue}
    out[o]=(src[p]*A00+src[p+4]*A10+src[q]*A01+src[q+4]*A11)/A;out[o+1]=(src[p+1]*A00+src[p+5]*A10+src[q+1]*A01+src[q+5]*A11)/A;
    out[o+2]=(src[p+2]*A00+src[p+6]*A10+src[q+2]*A01+src[q+6]*A11)/A;out[o+3]=A}o+=(WA-w)*4}
@@ -193,7 +203,19 @@ function drawEdge(cx,hw,hh,pk){var o=smooth(.08,.5,pk),c=ectx,k=edC.width/CW;if(
   c.globalCompositeOperation='destination-out';c.fillStyle=lgr(c,x1,0,x2,0,[[0,0],[.4,0],[1,1]],'0,0,0');c.fillRect(rx,-50,mR+2,200);c.restore()}
  c.globalCompositeOperation='destination-over';c.fillStyle=lgr(c,0,oy,0,oy+H,GLOWA,'240,240,240');c.fill(P);c.fillStyle='rgba(255,255,255,.012)';c.fill(P);
  c.globalCompositeOperation='source-over';c.lineWidth=LE.rimW;c.globalAlpha=LE.kR;c.strokeStyle=lgr(c,0,oy+r,0,oy+H-r,RIMA,'240,240,240');c.stroke(new Path2D(path(W-2*r,H-2*r,ox+r,oy+r)));
- c.lineWidth=LE.dark;c.globalAlpha=LE.kD;c.strokeStyle=lgr(c,0,oy,0,oy+H,DARKA,'0,0,0');c.stroke(P);c.globalAlpha=1}
+ c.lineWidth=LE.dark;c.globalAlpha=LE.kD;c.strokeStyle=lgr(c,0,oy,0,oy+H,DARKA,'0,0,0');c.stroke(P);c.globalAlpha=1;drawPrism(c,cx,hw,hh,pk,P)}
+/* The lifted lens refracts the bar's top/bottom boundary too. Its small
+   spectral highlights sit at that intersection, not around the whole rim. */
+function drawPrism(c,cx,hw,hh,pk,P){if(hh<=BH/2||pk<.02)return;
+ var dx=hw-hh+Math.sqrt(hh*hh-BH*BH/4),strength=.45*pk*smooth(0,8,2*hh-BH);
+ c.save();c.clip(P);c.globalCompositeOperation='lighter';
+ for(var side=-1;side<=1;side+=2){var x=cx+side*dx;if(x<56||x>BW-56)continue;
+  for(var edge=-1;edge<=1;edge+=2){var y=BH/2+edge*BH/2;
+   for(var ch=0;ch<3;ch++){c.save();c.translate(x+side*(ch-1)*.7,y-edge*(ch-1)*.6);c.scale(1.5,.75);
+    var rgb=ch===0?'255,0,0':ch===1?'0,255,0':'0,0,255',g=c.createRadialGradient(0,0,0,0,0,3.8);
+    g.addColorStop(0,'rgba('+rgb+','+strength+')');g.addColorStop(.25,'rgba('+rgb+','+(strength*.7)+')');g.addColorStop(1,'rgba('+rgb+',0)');
+    c.fillStyle=g;c.fillRect(-4,-4,8,8);c.restore();}}}
+ c.restore()}
 function Curve(tt,vv){this.t=tt;this.v=vv;var n=tt.length,d=[],m=[],i;for(i=0;i<n-1;i++)d.push((vv[i+1]-vv[i])/(tt[i+1]-tt[i]));
  m[0]=d[0];m[n-1]=d[n-2];for(i=1;i<n-1;i++)m[i]=d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2;
  for(i=0;i<n-1;i++){if(d[i]===0){m[i]=m[i+1]=0;continue}var a=m[i]/d[i],b=m[i+1]/d[i],h=a*a+b*b;if(h>9){var k=3/Math.sqrt(h);m[i]=k*a*d[i];m[i+1]=k*b*d[i]}}this.m=m}
@@ -223,28 +245,28 @@ function profile(dist,ch,t){if(dist<=0||t>=1.2)return 0;var n=Math.min(3,dist),l
  var a=lo?SHAPE[lo-1][ch].at(t):0,b=lo<3?SHAPE[lo][ch].at(t):a;return a+(b-a)*f}
 function startTap(to,pre){var dx=CX0+PITCH*to-motion.cx;
  an={t0:mclock,to:to,dir:dx<-.5?-1:dx>.5?1:0,dist:pre?0:Math.min(3,Math.abs(dx)/PITCH),rel:-1,pre:!!pre,
-  residual:shape.slice(),velocity:shapeV.slice()};}
+  delay:an||pre?0:.025,residual:shape.slice(),velocity:shapeV.slice()};}
 function stepAnim(dt){
  if(!an&&!drag)return false;
  var age=an?mclock-an.t0:0,pressure=pressing&&!cancelled||an&&!an.pre&&age<.23&&!cancelled;
- spring(motion,'cx','vx',drag&&!cancelled?drag.x:CX0+PITCH*(cancelled?downSel:an.to),15.83,.853,dt);
+ if(age>=an.delay||drag)spring(motion,'cx','vx',drag&&!cancelled?drag.x:CX0+PITCH*(cancelled?downSel:an.to),15.83,.853,dt);
  spring(motion,'size','vs',pressure?1:0,pressure?10.645:24.383,pressure?.8606:.9745,dt);
  spring(motion,'glass','vg',pressure?1:0,pressure?25:16,.999,dt);
  spring(motion,'bar','vb',pressing&&!cancelled?1:0,20,.74,dt);
  var old=shape.slice();
  for(var k=0;k<3;k++){var r=an.residual[k],v=an.velocity[k],decay=Math.exp(-22*age),carry=(r+(v+22*r)*age)*decay;
-  shape[k]=profile(an.dist,k,age)*(k===0?an.dir:1)+carry;shapeV[k]=dt>0?(shape[k]-old[k])/dt:0;}
+  shape[k]=profile(an.dist,k,k===2?age*1.13:age)*(k===0?an.dir:k===2?1.15:1)+carry;shapeV[k]=dt>0?(shape[k]-old[k])/dt:0;}
  var baseW=PW+16*motion.size,baseH=PH+16*motion.size,w=baseW*(1+shape[1]),cx=motion.cx+baseW*shape[0];
  Lx=cx-w/2;Rx=cx+w/2;wNom=w;curH=baseH*(1+shape[2]);
  lensV=Math.min(1,Math.max(0,motion.glass));holdX=motion.size;
- scaleV=1+.039*motion.bar;flashV=.6*Math.max(0,motion.bar);
+ scaleV=1+.039*motion.bar;flashV=.73*Math.max(0,motion.bar);
  if(!pressing&&age>1.25&&Math.abs(motion.cx-(CX0+PITCH*an.to))<.02&&Math.abs(motion.vx)<.1&&Math.abs(motion.size)<.001&&Math.abs(motion.glass)<.001){
   motion.cx=CX0+PITCH*an.to;motion.vx=motion.size=motion.vs=motion.glass=motion.vg=motion.bar=motion.vb=0;
   Lx=motion.cx-PW/2;Rx=motion.cx+PW/2;curH=PH;lensV=flashV=holdX=0;scaleV=1;shape=[0,0,0];shapeV=[0,0,0];an=null;return false;}
  return true;}
 function paint(){
- if(window.__motion)window.__motion.push({now:performance.now(),clock:mclock,L:Lx,R:Rx,h:curH,lens:lensV,flash:flashV,scale:scaleV,press:pressing});
- var pk=Math.min(1,Math.max(0,lensV)),w=Math.max(1,Rx-Lx),h=Math.max(1,curH);
+ if(window.__motion)window.__motion.push({now:performance.now(),clock:mclock,L:Lx,R:Rx,h:curH+1.2*Math.max(0,Math.min(1,lensV)),lens:lensV,flash:flashV,scale:scaleV,press:pressing});
+ var pk=Math.min(1,Math.max(0,lensV)),w=Math.max(1,Rx-Lx),h=Math.max(1,curH+1.2*pk);
  var iv=introV(),op=iv?iv[1].toFixed(3):(IN0>=0?'':'0');if(op!==INo){barEl.style.opacity=op;INo=op}
  var tf='scale('+(fit*scaleV*(iv?iv[0]:1)).toFixed(4)+')',fo=flashV.toFixed(3);if(tf!==lastTf){barEl.style.transform=tf;lastTf=tf}if(fo!==lastFo){flEl.style.opacity=fo;lastFo=fo}
  drawBase((Lx+Rx)/2,w/2,h/2,pk);drawEdge((Lx+Rx)/2,w/2,h/2,pk);
