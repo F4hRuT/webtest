@@ -16,10 +16,10 @@ var PHI=52.4*Math.PI/180,ARAT=1.889;
 var IOS=/iP(hone|od|ad)/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
 function pxr(){var r=window.devicePixelRatio||1;if(IOS)r=3;else if(r<2&&(navigator.maxTouchPoints>0||'ontouchstart' in window))r=3;return Math.min(3,Math.max(2,r))}
 function r2(n){return Math.round(n*100)/100}
-function path(W,H,ox,oy){
+function path(W,H,ox,oy,reverse){
  var R=H/2,c=Math.cos(PHI),s=Math.sin(PHI),qx=R*(1-c),qy=R*(1-s),b1=qx+qy*s/c,b2=b1+1.5*Math.pow(qy/c,2)/(R*c),a=Math.max(Math.min(ARAT*R,W/2),b2),k=Math.min(1,W/(2*a));
- function p(x,y){return r2(x+ox)+' '+r2(y+oy)}function X(x){return x*k}function Z(x){return W-x*k}
- var A='A'+r2(R*k)+' '+r2(R)+' 0 0 1 ';
+ function p(x,y){return r2((reverse?W-x:x)+ox)+' '+r2(y+oy)}function X(x){return x*k}function Z(x){return W-x*k}
+ var A='A'+r2(R*k)+' '+r2(R)+' 0 0 '+(reverse?0:1)+' ';
  return 'M'+p(0,R)+A+p(X(qx),qy)+'C'+p(X(b1),0)+' '+p(X(b2),0)+' '+p(X(a),0)+'L'+p(Z(a),0)+'C'+p(Z(b2),0)+' '+p(Z(b1),0)+' '+p(Z(qx),qy)+A+p(W,R)+A+p(Z(qx),H-qy)+'C'+p(Z(b1),H)+' '+p(Z(b2),H)+' '+p(Z(a),H)+'L'+p(X(a),H)+'C'+p(X(b2),H)+' '+p(X(b1),H)+' '+p(X(qx),H-qy)+A+p(0,R)+'Z';
 }
 var sel=0,tabsEl=$('tabs'),FONT='-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,Roboto,"Segoe UI",Arial,sans-serif';
@@ -144,7 +144,7 @@ function drawContent(x,color,weight){x.fillStyle=color;
   x.font=weight+' 10px '+FONT;x.textAlign='center';x.textBaseline='alphabetic';x.fillText(LABELS[i],cxp,PADY+48.8)}}
 function content(sc,color,weight,rf){var c=document.createElement('canvas');c.width=Math.round(CW*sc);c.height=Math.round(CH*sc);var x=c.getContext('2d',rf?{willReadFrequently:true}:undefined);x.setTransform(c.width/CW,0,0,c.height/CH,0,0);drawContent(x,color,weight);return c}
 function buildTex(){texW=content(TS,'#ffffff',500);texWS=content(TS,'#ffffff',500,1);texO=content(TS,'#b6d70a',600);texOS=content(TS,'#b6d70a',600,1);texOD=texOS.getContext('2d').getImageData(0,0,texOS.width,texOS.height);texWD=texWS.getContext('2d').getImageData(0,0,texWS.width,texWS.height)}
-var REFR={mag:1.096,band:.70,edge:.33,peek:12,rim:4,tb:.366,k:.8,disp:.65}      ,texOD=null,texWD=null,lensC=document.createElement('canvas'),lensX=lensC.getContext('2d'),lensID=null;
+var REFR={mag:1.14,band:.70,edge:.33,peek:12,rim:4,tb:.366,k:.8,disp:.65}      ,texOD=null,texWD=null,lensC=document.createElement('canvas'),lensX=lensC.getContext('2d'),lensID=null;
 function mkLut(){var a=new Float32Array(1024),p=new Float32Array(1024);for(var i=0;i<1024;i++){a[i]=Math.pow(i/1023,REFR.edge);p[i]=Math.pow(i/1023,1.3)}return [a,p]}
 /* v121 (speed): the lens is computed at most 2 px per pt (at 3x it was 2.25 times more work per frame) into a buffer that only grows (with
    a margin): before, the canvas and its pixel buffer were made anew on every frame the capsule changed size (garbage,
@@ -186,7 +186,7 @@ function drawBase(cx,hw,hh,pk){if(!texW)return;var c=bctx,X=PADX+cx,Y=PADY+BH/2,
  c.setTransform(baseC.width/CW,0,0,baseC.height/CH,0,0);c.globalCompositeOperation='source-over';c.clearRect(0,0,CW,CH);
  c.drawImage(texW,0,0,CW,CH);
  c.globalCompositeOperation='destination-out';c.fillStyle='#000';c.fill(pp);c.globalCompositeOperation='source-over';
- c.save();c.clip(pp);if(GLS&&GLS.on)GLS.caps(cx,hw,hh,1-pk);else{c.globalAlpha=1-pk;c.fillStyle='#070707';c.fillRect(0,0,CW,CH);c.globalAlpha=1}if(pk>.003&&texOD){if(!Q)drawRefracted(c,X,Y,hw,hh,pk);else{var im=1/(1-(1-1/REFR.mag)*pk);for(var i=0;i<4;i++){var ax=PADX+CX0+PITCH*i,l=i?ax-PITCH/2:0,r=i<3?ax+PITCH/2:CW;if(r<X-hw||l>X+hw)continue;c.save();c.beginPath();c.rect(l,0,r-l,CH);c.clip();c.translate(ax,Y);c.scale(im,im);c.translate(-ax,-Y);c.drawImage(texO,0,0,CW,CH);c.restore()}}}else c.drawImage(texO,0,0,CW,CH);c.restore()}
+ c.save();c.clip(pp);if(GLS&&GLS.on){GLS.caps(cx,hw,hh,1-pk);GLS.cut(cx,hw,hh,pk)}else{c.globalAlpha=1-pk;c.fillStyle='#070707';c.fillRect(0,0,CW,CH);c.globalAlpha=1}if(pk>.003&&texOD){if(!Q)drawRefracted(c,X,Y,hw,hh,pk);else{var im=1/(1-(1-1/REFR.mag)*pk);for(var i=0;i<4;i++){var ax=PADX+CX0+PITCH*i,l=i?ax-PITCH/2:0,r=i<3?ax+PITCH/2:CW;if(r<X-hw||l>X+hw)continue;c.save();c.beginPath();c.rect(l,0,r-l,CH);c.clip();c.translate(ax,Y);c.scale(im,im);c.translate(-ax,-Y);c.drawImage(texO,0,0,CW,CH);c.restore()}}}else c.drawImage(texO,0,0,CW,CH);c.restore()}
 var LE={dark:.767,rimW:.867,rimIn:.733,shade:1,shadeO:1,kR:1,kD:1};
 var DARKA=[[0,.5],[.06,.5],[.16,.58],[.3,.64],[.5,.66],[.7,.64],[.84,.56],[.94,.42],[1,.4]];
 var RIMA=[[0.0,0.125],[0.04,0.125],[0.0616,0.1198],[0.0831,0.1145],[0.1047,0.1091],[0.1262,0.1036],[0.1478,0.0981],[0.1694,0.0926],[0.1909,0.0872],[0.2125,0.082],[0.2341,0.077],[0.2556,0.0721],[0.2772,0.0675],[0.2987,0.063],[0.3203,0.0588],[0.3419,0.0549],[0.3634,0.0513],[0.385,0.0479],[0.4066,0.0449],[0.4281,0.0421],[0.4497,0.0396],[0.4712,0.0374],[0.4928,0.0356],[0.5072,0.0355],[0.5288,0.037],[0.5503,0.0387],[0.5719,0.0408],[0.5934,0.043],[0.615,0.0455],[0.6366,0.0482],[0.6581,0.0512],[0.6797,0.0543],[0.7013,0.0577],[0.7228,0.0613],[0.7444,0.0651],[0.7659,0.069],[0.7875,0.0731],[0.8091,0.0774],[0.8306,0.0817],[0.8522,0.0862],[0.8738,0.0906],[0.8953,0.0951],[0.9169,0.0995],[0.9384,0.1038],[0.96,0.108],[1.0,0.108]];
@@ -201,7 +201,8 @@ function drawEdge(cx,hw,hh,pk){var o=smooth(.08,.5,pk),c=ectx,k=edC.width/CW;if(
   for(var i=0;i<SLA.length;i++)g.addColorStop(SLA[i][0],'rgba(0,0,0,'+SLA[i][1]+')');
   c.save();c.beginPath();c.rect(rx,-50,mR+2,200);c.clip();c.globalAlpha=LE.shadeO;c.fillStyle=g;c.fill(P);c.globalAlpha=1;
   c.globalCompositeOperation='destination-out';c.fillStyle=lgr(c,x1,0,x2,0,[[0,0],[.4,0],[1,1]],'0,0,0');c.fillRect(rx,-50,mR+2,200);c.restore()}
- c.globalCompositeOperation='destination-over';c.fillStyle=lgr(c,0,oy,0,oy+H,GLOWA,'240,240,240');c.fill(P);c.fillStyle='rgba(255,255,255,.012)';c.fill(P);
+ c.globalCompositeOperation='destination-over';c.save();if(GLS&&GLS.on&&!Q)c.clip(new Path2D(bpath(BW-8*pk,BH-6*pk,4*pk,3*pk)));
+ c.fillStyle=lgr(c,0,oy,0,oy+H,GLOWA,'240,240,240');c.fill(P);c.fillStyle='rgba(255,255,255,.012)';c.fill(P);c.restore();
  c.globalCompositeOperation='source-over';c.lineWidth=LE.rimW;c.globalAlpha=LE.kR;c.strokeStyle=lgr(c,0,oy+r,0,oy+H-r,RIMA,'240,240,240');c.stroke(new Path2D(path(W-2*r,H-2*r,ox+r,oy+r)));
  c.lineWidth=LE.dark;c.globalAlpha=LE.kD;c.strokeStyle=lgr(c,0,oy,0,oy+H,DARKA,'0,0,0');c.stroke(P);c.globalAlpha=1;drawPrism(c,cx,hw,hh,pk,P)}
 /* The lifted lens refracts the bar's top/bottom boundary too. Its small
@@ -243,12 +244,12 @@ function spring(o,x,v,target,w,z,dt){var q=o[x]-target,u=o[v],a=z*w,b=w*Math.sqr
  o[x]=target+e*(q*c+k*sn);o[v]=e*(u*c-(a*u+w*w*q)*sn/b)}
 function profile(dist,ch,t){if(dist<=0||t>=1.2)return 0;var n=Math.min(3,dist),lo=Math.floor(n),f=n-lo;
  var a=lo?SHAPE[lo-1][ch].at(t):0,b=lo<3?SHAPE[lo][ch].at(t):a;return a+(b-a)*f}
-function startTap(to,pre){var dx=CX0+PITCH*to-motion.cx;
+function startTap(to,pre){if(!pre&&!pressing)downAt=mclock;var dx=CX0+PITCH*to-motion.cx;
  an={t0:mclock,to:to,dir:dx<-.5?-1:dx>.5?1:0,dist:pre?0:Math.min(3,Math.abs(dx)/PITCH),rel:-1,pre:!!pre,
   delay:an||pre?0:.025,residual:shape.slice(),velocity:shapeV.slice()};}
 function stepAnim(dt){
  if(!an&&!drag)return false;
- var age=an?mclock-an.t0:0,pressure=pressing&&!cancelled||an&&!an.pre&&age<.23&&!cancelled;
+ var age=an?mclock-an.t0:0,pressure=pressing&&!cancelled||an&&mclock-downAt<.23&&!cancelled;
  if(age>=an.delay||drag)spring(motion,'cx','vx',drag&&!cancelled?drag.x:CX0+PITCH*(cancelled?downSel:an.to),15.83,.853,dt);
  spring(motion,'size','vs',pressure?1:0,pressure?10.645:24.383,pressure?.8606:.9745,dt);
  spring(motion,'glass','vg',pressure?1:0,pressure?25:16,.999,dt);
@@ -265,7 +266,7 @@ function stepAnim(dt){
   Lx=motion.cx-PW/2;Rx=motion.cx+PW/2;curH=PH;lensV=flashV=holdX=0;scaleV=1;shape=[0,0,0];shapeV=[0,0,0];an=null;return false;}
  return true;}
 function paint(){
- if(window.__motion)window.__motion.push({now:performance.now(),clock:mclock,L:Lx,R:Rx,h:curH+1.2*Math.max(0,Math.min(1,lensV)),lens:lensV,flash:flashV,scale:scaleV,press:pressing});
+ if(window.__motion)window.__motion.push({now:performance.now(),clock:mclock,L:Lx,R:Rx,h:curH+1.2*Math.max(0,Math.min(1,lensV)),lens:lensV,flash:flashV,scale:scaleV,press:pressing,q:Q});
  var pk=Math.min(1,Math.max(0,lensV)),w=Math.max(1,Rx-Lx),h=Math.max(1,curH+1.2*pk);
  var iv=introV(),op=iv?iv[1].toFixed(3):(IN0>=0?'':'0');if(op!==INo){barEl.style.opacity=op;INo=op}
  var tf='scale('+(fit*scaleV*(iv?iv[0]:1)).toFixed(4)+')',fo=flashV.toFixed(3);if(tf!==lastTf){barEl.style.transform=tf;lastTf=tf}if(fo!==lastFo){flEl.style.opacity=fo;lastFo=fo}
@@ -350,8 +351,8 @@ window.ITB={gls:function(){return GLS},set:function(i){if(GLS&&GLS.screen)GLS.sc
    - colour: saturate 1.6 after the curve (iOS colour factor .65 - .00083 L; mean error 2-3 levels on the site colours);
    - then the per-pixel iOS rim (multiply / plus-lighter / plus-darker / saturate) and the capsule (backdrop-filter). ---------- */
 GLS=(function(){
- var M={on:false,err:'',ver:0,kick:function(){},snap:function(){},caps:function(){},screen:function(){},size:function(){}},
-  WIN=null,CAP=null,capKey='';
+ var M={on:false,err:'',ver:0,kick:function(){},snap:function(){},caps:function(){},cut:function(){},screen:function(){},size:function(){}},
+  WIN=null,CAP=null,capKey='',cutKey='',cutEls=[],cutPath=null;
  var MP=4,BWX=BW+2*MP,BHX=BH+2*MP,SMAX=1.6,CAPC=40;
  /* iOS window around the bar (pt) and the glass tone */
  /* tone of «Tinted» measured on the iPhone (23.10, grey 0..255 under the iOS bar): y = .1189 + .5494x - .2187x^2 (±0.4 level):
@@ -472,7 +473,22 @@ GLS=(function(){
      the height, and a plain middle; the caps are flat to 0.01 pt at CAPC from the ends */
   var cs=CAP.style,sv=function(x0){return 'url("data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="'+CAPC+'" height="'+PH+'" viewBox="'+x0+' 0 '+CAPC+' '+PH+'"><path d="'+path(PW,PH,0,0)+'"/></svg>')+'")'};
   cs.webkitMaskImage=cs.maskImage=sv(0)+','+sv(PW-CAPC)+',linear-gradient(#000,#000)';cs.webkitMaskRepeat=cs.maskRepeat='no-repeat';
-  $('glass').appendChild(WIN)}
+  $('glass').appendChild(WIN);cutEls=Array.prototype.filter.call(WIN.children,function(n){return n!==CAP}).map(function(n){return {node:n,x:parseFloat(n.style.left)-MP,y:parseFloat(n.style.top)-MP}});cutEls.push({node:flEl,x:0,y:0});
+  var ns='http://www.w3.org/2000/svg',defsSvg=document.createElementNS(ns,'svg'),defs=document.createElementNS(ns,'defs'),paths={};
+  defsSvg.setAttribute('width','0');defsSvg.setAttribute('height','0');defsSvg.style.cssText='position:absolute;pointer-events:none';
+  cutPath=document.createElementNS(ns,'path');cutPath.id='itb-lens-cut';cutPath.setAttribute('clip-rule','nonzero');cutPath.setAttribute('fill-rule','nonzero');defs.appendChild(cutPath);
+  cutEls.forEach(function(e){var key=e.x+','+e.y,id=paths[key];if(!id){id='itb-lens-cut-'+Object.keys(paths).length;paths[key]=id;
+    var cp=document.createElementNS(ns,'clipPath'),use=document.createElementNS(ns,'use');cp.id=id;cp.setAttribute('clipPathUnits','userSpaceOnUse');use.setAttribute('href','#itb-lens-cut');use.setAttribute('transform','translate('+(-e.x)+' '+(-e.y)+')');use.setAttribute('clip-rule','nonzero');cp.appendChild(use);defs.appendChild(cp);}e.url='url("#'+id+'")'});
+  defsSvg.appendChild(defs);barEl.appendChild(defsSvg)}
+ /* Refraction of the bar itself: the lifted lens exposes a narrow band of
+    the live page where the original bar boundary is compressed inward. Clip
+    each individual layer, not their parent (a masked backdrop group would
+    stop seeing the page). Nonzero winding = outside lens UNION smaller bar.
+    Keep the original masks/rim maps and restore every clip exactly at rest. */
+ M.cut=function(cx,hw,hh,pk){if(!M.on||!cutEls.length)return;if(Q)pk=0;
+  var key=pk<.003?'off':[cx,hw,hh,pk].map(function(v){return v.toFixed(2)}).join();if(key===cutKey)return;cutKey=key;
+  if(key!=='off')cutPath.setAttribute('d','M-500 -500H1000V1000H-500Z'+path(hw*2,hh*2,cx-hw,BH/2-hh,true)+bpath(BW-8*pk,BH-6*pk,4*pk,3*pk));
+  cutEls.forEach(function(e){var value=key==='off'?'':e.url;if(e.node.style.clipPath!==value)e.node.style.clipPath=e.node.style.webkitClipPath=value;})};
  /* selected-tab capsule: a backdrop-filter element over the glass (iOS: 0.87 brightness, -18, colour 1.2) */
  M.caps=function(cx,hw,hh,a){if(!M.on||!CAP)return;var k=[cx,hw,hh,a].map(function(n){return n.toFixed(2)}).join();if(k===capKey)return;capKey=k;var s=CAP.style;
   s.left=(cx-hw+MP).toFixed(2)+'px';s.top=(BH/2-hh+MP).toFixed(2)+'px';s.width=(2*hw).toFixed(2)+'px';s.height=(2*hh).toFixed(2)+'px';s.opacity=a.toFixed(3);
@@ -480,7 +496,7 @@ GLS=(function(){
      showed as two thin lines across it for a few frames */
   var cw=CAPC*2*hh/PH,ov=Math.min(1.5,cw/4),mid=Math.max(0,2*hw-2*cw)+2*ov;s.webkitMaskSize=s.maskSize='auto 100%,auto 100%,'+mid.toFixed(2)+'px 100%';s.webkitMaskPosition=s.maskPosition='0 0,100% 0,'+(cw-ov).toFixed(2)+'px 0'};
  function on(){var gs=$('glass').style;gs.clipPath=gs.webkitClipPath='none';gs.webkitMaskImage=gs.maskImage='none';gs.background='transparent';$('edge').style.display='none';WIN.style.display='';M.on=true;M.ver++;capKey='';try{paint()}catch(_){}}
- function off(){M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(WIN)WIN.style.display='none';paint()}catch(_){}}
+ function off(){try{M.cut(0,0,0,0)}catch(_){}M.on=false;try{$('edge').style.display='';paintBar(0);glassClip();if(WIN)WIN.style.display='none';paint()}catch(_){}}
  /* ?glshud: small debug line at the top of the screen (long frames, scroll events per second) — readable from a screenshot
     or a screen recording of the phone */
  if(/[?&]glshud/.test(location.search)){(function(){var d=document.createElement('div'),fr=[],se=[],lt=performance.now();

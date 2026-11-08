@@ -1,0 +1,47 @@
+{
+  "source": "Glass system UITabBar, physical iPhone 17 Pro, iOS 27.0.1, Tinted",
+  "native_points": [
+    402,
+    874
+  ],
+  "scale": 3,
+  "lossless": true,
+  "capture": "pymobiledevice3 DVT takeScreenshot; ICC preserved",
+  "personal_data": "menu-only crops, no page contents or phone identifiers",
+  "references": [
+    {
+      "file": "native-glass-rest.png",
+      "state": "Home selected, rest",
+      "crop_px": [
+        0,
+        2340,
+        1206,
+        261
+      ],
+      "original_px": [
+        1206,
+        2622
+      ],
+      "icc_sha256": "0ff6958f98684c61f6bbdce1368ddeaf3873baf84545baba482e920d92a914c0",
+      "crop_sha256": "32b592691831fc72737fe26e483532bfbb403a46dd763887aeb49f8e4b202991",
+      "bytes": 30117
+    },
+    {
+      "file": "native-glass-hold.png",
+      "state": "Support held, Home black background",
+      "crop_px": [
+        0,
+        2340,
+        1206,
+        261
+      ],
+      "original_px": [
+        1206,
+        2622
+      ],
+      "icc_sha256": "0ff6958f98684c61f6bbdce1368ddeaf3873baf84545baba482e920d92a914c0",
+      "crop_sha256": "af091612c80ed096f16aad6d310ad0217ca38a3bd45b5532898b371dfdf248dc",
+      "bytes": 80589
+    }
+  ]
+}
