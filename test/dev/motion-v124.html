@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Лаймо — проверка капсулы v124</title>
+<style>
+html,body{margin:0;background:#000;color:#fff;min-height:200svh}
+.dock{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 5px);height:80px;visibility:hidden}
+#status{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;right:10px;font:12px/1.4 ui-monospace,monospace;white-space:pre-wrap;color:#9fa;pointer-events:none}
+</style>
+<output id="status">v124 preview · загрузка</output><div class="dock" id="dock"></div>
+<script>
+window.__motion=[];window.__faults=[];
+addEventListener('error',function(e){__faults.push(e.message||'resource: '+(e.target.src||e.target.href||e.target.tagName))},true);
+addEventListener('unhandledrejection',function(e){__faults.push(String(e.reason))});
+['pointerdown','pointerup','pointercancel'].forEach(function(t){document.addEventListener(t,function(e){__motion.push({event:t,now:performance.now(),x:e.clientX,y:e.clientY})},{capture:true,passive:true})});
+var params=new URLSearchParams(location.search);
+if(params.has('basicTest'))window.Path2D=undefined;
+if(params.has('reducedTest')){var media=window.matchMedia;window.matchMedia=function(q){return q==='(prefers-reduced-motion:reduce)'?{matches:true}:media.call(window,q)}}
+window.ITBH={sel:function(){},ready:function(){document.getElementById('dock').style.visibility='visible'}};
+setInterval(function(){var c=document.querySelector('#itb-base'),g=window.ITB&&ITB.gls(),f=__motion.filter(function(x){return x.h});var last=f[f.length-1];
+document.querySelector('#status').textContent='v124 preview · '+innerWidth+'×'+innerHeight+' @'+devicePixelRatio+'\nJS/resource errors: '+__faults.length+(__faults.length?' '+__faults.join('; '):'')+'\nglass: '+(g&&g.on?'on':'off')+(g&&g.err?' '+g.err:'')+(last?'\nH '+last.h.toFixed(2)+' W '+(last.R-last.L).toFixed(2)+' X '+((last.L+last.R)/2).toFixed(2)+'\nframes '+f.length:'');
+if(__motion.length>1500)__motion.splice(0,__motion.length-1500)},250);
+</script>
+<script src="motion-v124.js?r=1"></script>
+</html>
